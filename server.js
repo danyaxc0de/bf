@@ -9,6 +9,10 @@ const { evaluateUsername } = require('./scoring');
 const { startScanner } = require('./scanner');
 
 const app = express();
+
+// ВОТ ЭТА СТРОЧКА ЧИНИТ ОШИБКУ С ЛИМИТАМИ НА RENDER:
+app.set('trust proxy', 1); 
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
