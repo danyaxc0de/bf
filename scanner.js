@@ -1,33 +1,40 @@
-const { fullUsernameCheck, isValidFormat } = require('./telegram');
+const { fullUsernameCheck } = require('./telegram');
 const { evaluateUsername } = require('./scoring');
-const db = require('./db');
 
-function startScanner({ intervalMs = 4000 } = {}) {
+const WORDS = ['danya', 'alex', 'boss', 'money', 'crypto', 'magic', 'storm', 'king', 'queen', 'code', 'tech', 'wolf', 'top'];
+
+async function sendNtfy(topic, message) {
+  try {
+    await fetch(`https://ntfy.sh/${topic}`, { method: 'POST', body: message });
+  } catch (e) { console.error('ntfy error:', e.message); }
+}
+
+function startScanner({ intervalMs = 10000 } = {}) {
   console.log('Сканер запущен...');
   
   setInterval(async () => {
     try {
-      const randomUsername = 'user' + Math.random().toString(36).slice(2, 8);
+      const baseWord = WORDS[Math.floor(Math.random() * WORDS.length)];
+      const suffix = Math.random() > 0.7 ? Math.floor(Math.random() * 99) : '';
+      const randomUsername = baseWord + suffix;
       
-      if (!isValidFormat(randomUsername)) return;
+      const existing = global.db.prepare('SELECT id FROM found_usernames WHERE username = ?').get(randomUsername);
+      if (existing) return; 
       
       const result = await fullUsernameCheck(randomUsername);
       
       if (result.status === 'free' || result.status === 'fragment_sale') {
         const { total, breakdown } = evaluateUsername(randomUsername);
         
-        const existing = db.prepare('SELECT id FROM found_usernames WHERE username = ?').get(randomUsername);
-        if (!existing) {
-          db.prepare(`
-            INSERT INTO found_usernames 
-            (username, length, score, score_breakdown, status, fragment_price, found_at, last_checked_at) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-          `).run(
-            randomUsername, randomUsername.length, total, JSON.stringify(breakdown),
-            result.status, result.price || null, Date.now(), Date.now()
-          );
-          console.log(`Найден: @${randomUsername} (${total} баллов)`);
-        }
+        global.db.prepare(`
+          INSERT INTO found_usernames 
+          (username, length, score, score_breakdown, status, fragment_price, found_at, last_checked_at, is_hidden) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+        `).run(randomUsername, randomUsername.length, total, JSON.stringify(breakdown), result.status, result.price || null, Date.now(), Date.now());
+        
+        sendNtfy('usolov', `Найден: @${randomUsername}\nScore: ${total}\nСтатус: ${result.status}`);
+
+        console.log(`Найден: @${randomUsername} (${total} баллов)`);
       }
     } catch (e) {
       console.error('Ошибка сканера:', e.message);
