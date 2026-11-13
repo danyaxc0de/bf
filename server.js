@@ -4,6 +4,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 const { init } = require('./db');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -15,6 +16,7 @@ app.use(globalLimiter);
 
 const PORT = process.env.PORT || 3000;
 const APP_URL = process.env.APP_URL || 'https://bubfind.js.org';
+const BOT_TOKEN = process.env.BOT_TOKEN;
 
 init().then((database) => {
   console.log('База данных готова к работе!');
@@ -24,27 +26,39 @@ init().then((database) => {
   const { fullUsernameCheck, isValidFormat } = require('./telegram');
   const { evaluateUsername } = require('./scoring');
 
-  app.post('/auth/register', (req, res) => {
-    const { login, password } = req.body;
-    if (!login || !password) return res.status(400).json({ error: 'Заполни все поля' });
+  // --- АВТОРИЗАЦИЯ ЧЕРЕЗ TELEGRAM WEBAPP ---
+  app.post('/auth/telegram-webapp', (req, res) => {
+    const { initData } = req.body;
+    if (!initData) return res.status(400).json({ error: 'Нет данных' });
+
     try {
-      const info = global.db.prepare('INSERT INTO users (telegram_id, tier, created_at, coins) VALUES (?, ?, ?, ?)').run(login, 'free', Date.now(), 30);
-      const userId = info.lastInsertRowid;
-      const code = Math.random().toString(36).slice(2, 8).toUpperCase();
-      global.db.prepare('INSERT INTO referrals (user_id, code, created_at) VALUES (?, ?, ?)').run(userId, code, Date.now());
-      const token = jwt.sign({ userId }, process.env.JWT_SECRET || 'super_secret_key_12345', { expiresIn: '7d' });
-      res.json({ token, coins: 30 });
-    } catch (e) { res.status(500).json({ error: 'Логин занят' }); }
+      const urlParams = new URLSearchParams(initData);
+      const hash = urlParams.get('hash');
+      urlParams.delete('hash');
+      const dataCheckString = [...urlParams.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([k, v]) => `${k}=${v}`).join('\n');
+      
+      const secretKey = crypto.createHmac('sha256', 'WebAppData').update(BOT_TOKEN).digest();
+      const signature = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+      
+      if (signature !== hash) return res.status(401).json({ error: 'Неверная подпись' });
+      
+      const user = JSON.parse(urlParams.get('user'));
+      
+      let dbUser = global.db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(String(user.id));
+      if (!dbUser) {
+        const info = global.db.prepare('INSERT INTO users (telegram_id, tier, created_at, coins) VALUES (?, ?, ?, ?)').run(String(user.id), 'free', Date.now(), 30);
+        const userId = info.lastInsertRowid;
+        const code = Math.random().toString(36).slice(2, 8).toUpperCase();
+        global.db.prepare('INSERT INTO referrals (user_id, code, created_at) VALUES (?, ?, ?)').run(userId, code, Date.now());
+        dbUser = global.db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+      }
+
+      const token = jwt.sign({ userId: dbUser.id }, process.env.JWT_SECRET || 'super_secret_key_12345', { expiresIn: '7d' });
+      res.json({ token, tier: dbUser.tier, coins: dbUser.coins, profile_username: dbUser.profile_username });
+    } catch (e) { res.status(500).json({ error: 'Ошибка авторизации' }); }
   });
 
-  app.post('/auth/login', (req, res) => {
-    const { login, password } = req.body;
-    const user = global.db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(login);
-    if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'super_secret_key_12345', { expiresIn: '7d' });
-    res.json({ token, tier: user.tier, coins: user.coins, profile_username: user.profile_username });
-  });
-
+  // --- ПОИСК И ГЕНЕРАТОРЫ ---
   app.get('/search-by-name/:name', requireAuth, async (req, res) => {
     const user = global.db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
     if (user.coins < 20) return res.status(403).json({ error: 'Недостаточно ЮК (нужно 20)' });
@@ -96,17 +110,9 @@ init().then((database) => {
     res.json({ result: { username: randomUsername, score, status }, coinsLeft: user.coins - 10 });
   });
 
+  // --- ОСТАЛЬНОЕ ---
   app.get('/pool/top-finds', (req, res) => {
     res.json(global.db.prepare(`SELECT * FROM found_usernames WHERE is_hidden = 0 ORDER BY score DESC LIMIT 50`).all());
-  });
-
-  app.post('/user/set-username', requireAuth, (req, res) => {
-    const { username } = req.body;
-    const check = global.db.prepare('SELECT * FROM found_usernames WHERE username = ? AND is_hidden = 0').get(username);
-    if (!check) return res.status(400).json({ error: 'Этот ник нельзя поставить' });
-
-    global.db.prepare('UPDATE users SET profile_username = ? WHERE id = ?').run(username, req.user.id);
-    res.json({ ok: true });
   });
 
   app.get('/referral/me', requireAuth, (req, res) => {
@@ -128,8 +134,7 @@ init().then((database) => {
   });
 
   app.get('/top/users', (req, res) => {
-    const users = global.db.prepare('SELECT telegram_id, coins FROM users ORDER BY coins DESC LIMIT 10').all();
-    res.json(users);
+    res.json(global.db.prepare('SELECT telegram_id, coins FROM users ORDER BY coins DESC LIMIT 10').all());
   });
 
   app.get('/top/hunters', (req, res) => {
