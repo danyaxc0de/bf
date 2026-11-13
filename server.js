@@ -29,6 +29,10 @@ init().then((database) => {
   app.post('/auth/register', (req, res) => {
     const { login, password, ref } = req.body;
     if (!login || !password) return res.status(400).json({ error: 'Заполни все поля' });
+    
+    const existing = global.db.prepare('SELECT id FROM users WHERE telegram_id = ?').get(login);
+    if (existing) return res.status(400).json({ error: 'Этот логин уже занят' });
+
     try {
       const info = global.db.prepare('INSERT INTO users (telegram_id, tier, created_at) VALUES (?, ?, ?)').run(login, 'free', Date.now());
       const userId = info.lastInsertRowid;
@@ -46,7 +50,7 @@ init().then((database) => {
 
       const token = jwt.sign({ userId }, process.env.JWT_SECRET || 'super_secret_key_12345', { expiresIn: '7d' });
       res.json({ token });
-    } catch (e) { res.status(500).json({ error: 'Пользователь уже существует' }); }
+    } catch (e) { res.status(500).json({ error: 'Ошибка сервера' }); }
   });
 
   function checkReferralBonus(userId) {
@@ -68,38 +72,28 @@ init().then((database) => {
     res.json({ token, tier: user.tier });
   });
 
-  // --- ВЕБХУК ОТ БОТА (Промокоды) ---
-  app.post('/promo/redeem', (req, res) => {
-    const { code, telegram_id } = req.body;
-    const promo = global.db.prepare('SELECT * FROM promo_codes WHERE code = ? AND uses_left > 0').get(code);
-    if (!promo) return res.status(404).json({ error: 'Промокод не найден' });
+  // --- ПОИСК (С ЛИМИТАМИ) ---
+  app.get('/check/:username', requireAuth, async (req, res) => {
+    const user = global.db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
     
-    const user = global.db.prepare('SELECT id FROM users WHERE telegram_id = ?').get(telegram_id);
-    if (!user) return res.status(404).json({ error: 'Юзер не найден' });
+    if (user.tier === 'premium' && user.premium_until && user.premium_until < Date.now()) {
+      global.db.prepare('UPDATE users SET tier = ? WHERE id = ?').run('free', user.id);
+      user.tier = 'free';
+    }
 
-    const now = Date.now();
-    const addDays = 1;
-    const newPremium = now + (addDays * 24 * 60 * 60 * 1000);
+    if (user.tier === 'free') {
+      const today = new Date().setHours(0,0,0,0);
+      const checksToday = global.db.prepare(`SELECT COUNT(*) as cnt FROM request_log WHERE user_id = ? AND action = 'check' AND created_at > ?`).get(user.id, today).cnt;
+      if (checksToday >= 5) {
+        return res.status(403).json({ error: 'Дневной лимит (5) исчерпан. Купи Premium.' });
+      }
+    }
 
-    global.db.prepare('UPDATE users SET tier = ?, premium_until = ? WHERE id = ?').run('premium', newPremium, user.id);
-    global.db.prepare('UPDATE promo_codes SET uses_left = uses_left - 1 WHERE code = ?').run(code);
-    res.json({ ok: true });
-  });
-
-  // --- РЕФЕРАЛЬНАЯ ССЫЛКА ---
-  app.get('/referral/me', requireAuth, (req, res) => {
-    const row = global.db.prepare('SELECT code FROM referrals WHERE user_id = ?').get(req.user.id);
-    if (!row) return res.status(404).json({ error: 'Реф. код не найден' });
-    const invitedCount = global.db.prepare('SELECT COUNT(*) as cnt FROM referrals WHERE referred_by_code = ?').get(row.code).cnt;
-    res.json({ code: row.code, link: `${APP_URL}/r/${row.code}`, invited: invitedCount, bonusPerInvite: '5 друзей = 1 день Premium' });
-  });
-
-  app.get('/r/:code', (req, res) => { res.redirect(`/?ref=${req.params.code}`); });
-
-  // --- ПОИСК ---
-  app.get('/check/:username', async (req, res) => {
     const username = req.params.username.replace('@', '');
     if (!isValidFormat(username)) return res.status(400).json({ error: 'Некорректный формат' });
+    
+    global.db.prepare('INSERT INTO request_log (user_id, action, created_at) VALUES (?, ?, ?)').run(user.id, 'check', Date.now());
+
     const result = await fullUsernameCheck(username);
     if (result.status === 'free') {
       const { total, breakdown } = evaluateUsername(username);
@@ -108,6 +102,7 @@ init().then((database) => {
     res.json(result);
   });
 
+  // --- ИМЕННЫЕ (ТОЛЬКО PREMIUM) ---
   app.get('/search-by-name/:name', requireAuth, async (req, res) => {
     const user = global.db.prepare('SELECT tier, premium_until FROM users WHERE id = ?').get(req.user.id);
     if (user.tier !== 'premium' || (user.premium_until && user.premium_until < Date.now())) {
@@ -126,15 +121,64 @@ init().then((database) => {
         const { total } = evaluateUsername(username);
         results.push({ username, score: total });
       }
-      await new Promise(r => setTimeout(r, 150)); 
+      await new Promise(r => setTimeout(r, 200)); 
     }
     results.sort((a, b) => b.score - a.score);
     res.json({ base: baseName, results });
   });
 
+  // --- НАХОДКИ ---
   app.get('/pool/top-finds', (req, res) => {
     const rows = global.db.prepare(`SELECT * FROM found_usernames WHERE is_hidden = 0 ORDER BY score DESC LIMIT 50`).all();
     res.json(rows);
+  });
+
+  // --- РЕФЕРАЛКИ ---
+  app.get('/referral/me', requireAuth, (req, res) => {
+    const row = global.db.prepare('SELECT code FROM referrals WHERE user_id = ?').get(req.user.id);
+    if (!row) return res.status(404).json({ error: 'Реф. код не найден' });
+    const invitedCount = global.db.prepare('SELECT COUNT(*) as cnt FROM referrals WHERE referred_by_code = ?').get(row.code).cnt;
+    res.json({ code: row.code, link: `${APP_URL}/r/${row.code}`, invited: invitedCount, bonusPerInvite: '5 друзей = 1 день Premium' });
+  });
+
+  app.get('/r/:code', (req, res) => { res.redirect(`/?ref=${req.params.code}`); });
+
+  // --- ПРОМОКОДЫ ---
+  app.post('/promo/redeem', (req, res) => {
+    const { code, telegram_id } = req.body;
+    const promo = global.db.prepare('SELECT * FROM promo_codes WHERE code = ? AND uses_left > 0').get(code);
+    if (!promo) return res.status(404).json({ error: 'Промокод не найден' });
+    
+    const user = global.db.prepare('SELECT id FROM users WHERE telegram_id = ?').get(telegram_id);
+    if (!user) return res.status(404).json({ error: 'Юзер не найден' });
+
+    const now = Date.now();
+    const addDays = 1;
+    const newPremium = now + (addDays * 24 * 60 * 60 * 1000);
+
+    global.db.prepare('UPDATE users SET tier = ?, premium_until = ? WHERE id = ?').run('premium', newPremium, user.id);
+    global.db.prepare('UPDATE promo_codes SET uses_left = uses_left - 1 WHERE code = ?').run(code);
+    res.json({ ok: true });
+  });
+
+  // --- ВЕБХУК ОПЛАТЫ ---
+  app.post('/auth/premium-webhook', (req, res) => {
+    const { telegram_id, plan } = req.body;
+    const user = global.db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(telegram_id);
+    if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+
+    let addDays = 0;
+    if (plan === 'day') addDays = 1;
+    if (plan === 'week') addDays = 7;
+    if (plan === 'month') addDays = 30;
+    if (plan === 'forever') addDays = 36500;
+
+    const now = Date.now();
+    const currentPremium = user.premium_until || now;
+    const newPremium = currentPremium + (addDays * 24 * 60 * 60 * 1000);
+
+    global.db.prepare('UPDATE users SET tier = ?, premium_until = ? WHERE id = ?').run('premium', newPremium, user.id);
+    res.json({ ok: true });
   });
 
   // --- АДМИНКА ---
@@ -162,6 +206,7 @@ init().then((database) => {
     res.json({ ok: true });
   });
 
+  // --- ЗАПУСК ---
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Сервер на порту ${PORT}`);
     const { startScanner } = require('./scanner');
