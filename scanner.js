@@ -1,8 +1,6 @@
 const { fullUsernameCheck } = require('./telegram');
 const { evaluateUsername } = require('./scoring');
 
-const WORDS = ['danya', 'alex', 'boss', 'money', 'crypto', 'magic', 'storm', 'king', 'queen', 'code', 'tech', 'wolf', 'top'];
-
 async function sendNtfy(topic, message) {
   try {
     await fetch(`https://ntfy.sh/${topic}`, { method: 'POST', body: message });
@@ -14,16 +12,19 @@ function startScanner({ intervalMs = 10000 } = {}) {
   
   setInterval(async () => {
     try {
-      const baseWord = WORDS[Math.floor(Math.random() * WORDS.length)];
-      const suffix = Math.random() > 0.7 ? Math.floor(Math.random() * 99) : '';
-      const randomUsername = baseWord + suffix;
+      const chars = 'abcdefghiklmnoprstuvwxy';
+      const length = Math.random() > 0.5 ? 5 : 6;
+      let randomUsername = '';
+      for (let i = 0; i < length; i++) {
+        randomUsername += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
       
       const existing = global.db.prepare('SELECT id FROM found_usernames WHERE username = ?').get(randomUsername);
       if (existing) return; 
       
       const result = await fullUsernameCheck(randomUsername);
       
-      if (result.status === 'free' || result.status === 'fragment_sale') {
+      if (result.status === 'free') {
         const { total, breakdown } = evaluateUsername(randomUsername);
         
         global.db.prepare(`
@@ -32,8 +33,10 @@ function startScanner({ intervalMs = 10000 } = {}) {
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
         `).run(randomUsername, randomUsername.length, total, JSON.stringify(breakdown), result.status, result.price || null, Date.now(), Date.now());
         
-        sendNtfy('usolov', `Найден: @${randomUsername}\nScore: ${total}\nСтатус: ${result.status}`);
-
+        if (total >= 60) {
+          sendNtfy('usolov', `Найден: @${randomUsername}\nScore: ${total}`);
+        }
+        
         console.log(`Найден: @${randomUsername} (${total} баллов)`);
       }
     } catch (e) {
