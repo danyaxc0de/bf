@@ -4,105 +4,81 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>BubFind</title>
-<meta name="description" content="Находи свободные Telegram-юзернеймы">
-<meta name="theme-color" content="#0a0a0e">
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/icons/icon-192.png">
-<link rel="apple-touch-icon" href="/icons/icon-192.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <style>
-  :root{
-    --bg:#0a0a0e; --bg2:#101016; --card:#15151d; --border:#262633;
-    --text:#f2f2f5; --sub:#8b8b96; --accent:#6fa8ff; --accent2:#2b4fb8;
-    --ok:#4ade80; --bad:#f87171;
-  }
-  *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',sans-serif}
+  :root{ --bg:#050508; --card: rgba(255, 255, 255, 0.05); --border: rgba(255, 255, 255, 0.12); --text:#ffffff; --sub:#a1a1aa; --accent:#6fa8ff; --accent2:#2b4fb8; --ok:#4ade80; --bad:#f87171; --star:#fbbf24; }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',sans-serif;-webkit-tap-highlight-color:transparent;}
   html,body{height:100%;background:var(--bg);color:var(--text);overflow:hidden}
-  body{
-    -webkit-tap-highlight-color:transparent;
-    background:
-      radial-gradient(circle at 15% 10%, rgba(111,168,255,0.08), transparent 40%),
-      radial-gradient(circle at 85% 90%, rgba(43,79,184,0.10), transparent 45%),
-      var(--bg);
-  }
-  .donut{position:fixed;border-radius:50%;pointer-events:none;z-index:0;opacity:0.5}
-  .donut::after{content:'';position:absolute;inset:28%;border-radius:50%;background:var(--bg)}
+  body{ background: radial-gradient(circle at 10% 10%, rgba(111,168,255,0.15), transparent 50%), radial-gradient(circle at 90% 90%, rgba(43,79,184,0.15), transparent 50%), #050508; }
+  .donut{position:fixed;border-radius:50%;pointer-events:none;z-index:0;opacity:0.4;filter: blur(2px);}
+  .donut::after{content:'';position:absolute;inset:28%;border-radius:50%;background:#050508;}
   #app{position:relative;z-index:1;max-width:460px;margin:0 auto;height:100vh;display:flex;flex-direction:column}
-  .screen{display:none;flex-direction:column;flex:1;min-height:0;animation:fade .25s ease}
+  .screen{display:none;flex-direction:column;flex:1;min-height:0;animation:fade .3s cubic-bezier(0.16, 1, 0.3, 1)}
   .screen.active{display:flex}
-  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-
-  .topbar{padding:env(safe-area-inset-top,0px) 20px 0;display:flex;align-items:center;justify-content:space-between;padding-top:calc(env(safe-area-inset-top,0px) + 20px)}
-  .brand{font-weight:800;font-size:20px;letter-spacing:-0.02em;display:flex;align-items:center;gap:8px}
-  .brand .ring{width:20px;height:20px;border-radius:50%;background:conic-gradient(var(--accent),var(--accent2),var(--accent));position:relative}
-  .brand .ring::after{content:'';position:absolute;inset:30%;border-radius:50%;background:var(--bg2)}
-  .badge{font-size:11px;font-weight:700;color:#0a0a0e;background:linear-gradient(135deg,var(--accent),var(--accent2));padding:5px 10px;border-radius:999px}
-
-  .field{display:flex;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:4px 4px 4px 16px}
+  @keyframes fade{from{opacity:0;transform:translateY(10px) scale(0.98)}to{opacity:1;transform:none}}
+  .topbar{padding:env(safe-area-inset-top,0px) 20px 0;display:flex;align-items:center;justify-content:space-between;padding-top:calc(env(safe-area-inset-top,0px) + 20px); z-index: 10;}
+  .brand{font-weight:800;font-size:22px;letter-spacing:-0.03em;display:flex;align-items:center;gap:8px;}
+  .badge{font-size:11px;font-weight:700;color:#000;background:linear-gradient(135deg,#fff,#d1d1d1);padding:5px 10px;border-radius:999px; box-shadow: 0 4px 12px rgba(255,255,255,0.2);}
+  .field, .card { background: var(--card); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); border: 1px solid var(--border); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255,255,255,0.1); border-radius: 18px;}
+  .field { display:flex;align-items:center;padding:4px 4px 4px 16px; }
   .field input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-size:16px;padding:12px 8px}
-  .btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#0a0a0e;font-weight:700;font-size:14px;border-radius:10px;padding:12px 18px;cursor:pointer}
-  .btn-block{width:100%;padding:14px;border-radius:12px;font-size:15px}
-  .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
-
-  .card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:20px}
-  .pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:5px 10px;border-radius:999px}
-  .pill.ok{background:rgba(74,222,128,0.12);color:var(--ok)}
-  .pill.bad{background:rgba(248,113,113,0.12);color:var(--bad)}
-  .pill.lock{background:rgba(111,168,255,0.1);color:var(--accent)}
-
-  .row{display:flex;justify-content:space-between;align-items:center;padding:16px 4px;border-bottom:1px solid #1c1c26;background:none;border-left:none;border-right:none;border-top:none;color:var(--text);width:100%;text-align:left;cursor:pointer}
-  .row:last-child{border-bottom:none}
-  .row span.label{display:flex;align-items:center;gap:12px;font-size:14px;font-weight:500}
-
-  .tabbar{display:flex;justify-content:space-around;align-items:center;padding:14px 0 calc(env(safe-area-inset-bottom,0px) + 14px);border-top:1px solid #1c1c26;background:var(--bg2)}
-  .tabbar button{background:none;border:none;color:var(--sub);display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;cursor:pointer}
-  .tabbar button.active{color:var(--accent)}
-
-  .content{flex:1;overflow:auto;padding:16px 20px 20px}
-  .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:#1c1c26;border:1px solid var(--border);padding:10px 18px;border-radius:12px;font-size:13px;opacity:0;transition:opacity .2s;z-index:50;max-width:90%;text-align:center}
-  .toast.show{opacity:1}
-  label.small{font-size:12px;color:var(--sub);display:block;margin-bottom:8px}
+  .field input::placeholder { color: var(--sub); }
+  .btn{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;font-weight:700;font-size:14px;border-radius:12px;padding:12px 18px;cursor:pointer; box-shadow: 0 4px 15px rgba(111,168,255,0.4); transition: transform 0.1s;}
+  .btn:active { transform: scale(0.96); }
+  .btn-block{width:100%;padding:16px;border-radius:14px;font-size:15px}
+  .btn-ghost{background:var(--card);border:1px solid var(--border);color:var(--text); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);}
+  .card{ background:var(--card); border:1px solid var(--border); border-radius:22px; padding:20px; margin-bottom:16px;}
+  .tabbar{ display:flex;justify-content:space-around;align-items:center; padding:14px 0 calc(env(safe-area-inset-bottom,0px) + 14px); background: rgba(15, 15, 20, 0.6); backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px); border-top: 1px solid var(--border); box-shadow: 0 -10px 40px rgba(0,0,0,0.5);}
+  .tabbar button{background:none;border:none;color:var(--sub);display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;font-weight: 500; cursor:pointer; transition: 0.2s;}
+  .tabbar button.active{color:var(--accent); text-shadow: 0 0 10px rgba(111,168,255,0.5);}
+  .content{flex:1;overflow:auto;padding:16px 20px 20px; z-index: 5;}
+  .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:rgba(30,30,40,0.8);backdrop-filter:blur(20px);border:1px solid var(--border);padding:12px 22px;border-radius:16px;font-size:13px;font-weight: 500;opacity:0;transition:all .3s;z-index:50;max-width:90%;text-align:center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);}
+  .toast.show{opacity:1; transform: translateX(-50%) translateY(-5px);}
+  .premium-btn { display: flex; justify-content: space-between; align-items: center; width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 16px; border-radius: 16px; margin-bottom: 12px; color: white; cursor: pointer; transition: 0.2s; backdrop-filter: blur(10px); }
+  .premium-btn:hover { border-color: var(--star); background: rgba(251, 191, 36, 0.1); box-shadow: 0 0 20px rgba(251,191,36,0.15); }
+  .premium-price { color: var(--star); font-weight: 800; font-size: 16px; text-shadow: 0 0 10px rgba(251,191,36,0.3);}
+  .user-row { display: flex; justify-content: space-between; padding: 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: 0.2s;}
+  .user-row:hover { background: rgba(255,255,255,0.05); }
+  .user-row:last-child { border-bottom: none; }
+  .pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:6px 12px;border-radius:999px}
+  .pill.ok{background:rgba(74,222,128,0.15);color:var(--ok); border: 1px solid rgba(74,222,128,0.2);}
+  .pill.bad{background:rgba(248,113,113,0.15);color:var(--bad); border: 1px solid rgba(248,113,113,0.2);}
+  label{ font-weight: 500; letter-spacing: 0.01em; }
 </style>
 </head>
 <body>
-
-<div class="donut" style="width:140px;height:140px;top:-30px;left:-40px;background:#2a2a35"></div>
-<div class="donut" style="width:90px;height:90px;top:120px;right:-30px;background:#1c3a66"></div>
-<div class="donut" style="width:60px;height:60px;bottom:160px;left:-20px;background:#3a3a46"></div>
-<div class="donut" style="width:110px;height:110px;bottom:-40px;right:-50px;background:#16284d"></div>
-
-<audio id="bgMusic" src="https://cdn.budgetpixel.com/audio-library/music/ambient-peaceful-slow-soft-piano-cw0x9s.wav" loop preload="none"></audio>
+<div class="donut" style="width:200px;height:200px;top:-50px;left:-50px;background:#2a2a35"></div>
+<div class="donut" style="width:120px;height:120px;top:150px;right:-40px;background:#1c3a66"></div>
+<div class="donut" style="width:80px;height:80px;bottom:200px;left:-20px;background:#3a3a46"></div>
+<div class="donut" style="width:160px;height:160px;bottom:-60px;right:-60px;background:#16284d"></div>
 
 <div id="app">
-
   <section class="screen active" id="screen-login">
     <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:24px">
-      <div style="width:72px;height:72px;border-radius:24px;background:conic-gradient(var(--accent),var(--accent2),var(--accent));position:relative">
-        <div style="position:absolute;inset:26%;border-radius:50%;background:var(--bg)"></div>
+      <div style="width:80px;height:80px;border-radius:26px;background:conic-gradient(from 180deg, var(--accent), var(--accent2), var(--accent));position:relative; box-shadow: 0 10px 40px rgba(111,168,255,0.4);">
+        <div style="position:absolute;inset:28%;border-radius:50%;background:var(--bg)"></div>
       </div>
-      <div style="margin-top:18px;font-size:24px;font-weight:800">BubFind</div>
-      <div style="margin-top:6px;font-size:13px;color:var(--sub)">Находи свободные юзернеймы</div>
+      <div style="margin-top:22px;font-size:28px;font-weight:800; letter-spacing:-0.04em;">BubFind</div>
+      <div style="margin-top:6px;font-size:13px;color:var(--sub); font-weight: 500;">Находи свободные юзернеймы</div>
     </div>
-    <div style="padding:0 24px 24px;display:flex;flex-direction:column;gap:10px">
-      <label class="small" for="loginInput">Логин</label>
-      <input id="loginInput" class="field" style="padding:14px 16px;color:var(--text);background:var(--card);border:1px solid var(--border);border-radius:12px;font-size:15px">
-      <label class="small" for="passInput" style="margin-top:4px">Пароль</label>
-      <input id="passInput" type="password" class="field" style="padding:14px 16px;color:var(--text);background:var(--card);border:1px solid var(--border);border-radius:12px;font-size:15px">
+    <div style="padding:0 24px 24px;display:flex;flex-direction:column;gap:12px">
+      <label style="font-size:12px;color:var(--sub); margin-left: 4px;">Логин</label>
+      <input id="loginInput" class="field" style="padding:16px;color:var(--text);font-size:15px;">
+      <label style="font-size:12px;color:var(--sub);margin-top:4px; margin-left: 4px;">Пароль</label>
+      <input id="passInput" type="password" class="field" style="padding:16px;color:var(--text);font-size:15px;">
       <button class="btn btn-block" style="margin-top:10px" onclick="doLogin()">Войти</button>
-      <button class="btn btn-ghost btn-block" onclick="doRegister()">Создать аккаунт</button>
-      <div style="text-align:center;font-size:11px;color:#5b5b66;margin-top:4px">Защищено от ботов и абуза</div>
+      <button class="btn-ghost btn btn-block" onclick="doRegister()">Создать аккаунт</button>
     </div>
   </section>
 
   <section class="screen" id="screen-main">
-    <div class="topbar">
-      <div class="brand"><span class="ring"></span>BubFind</div>
-      <div class="badge" id="tierBadge">FREE</div>
-    </div>
+    <div class="topbar"><div class="brand">BubFind</div><div class="badge" id="userTierBadge">FREE</div></div>
     <div class="content">
-      <label class="small" for="search">Проверь юзернейм</label>
-      <div class="field" style="margin-bottom:16px">
-        <span style="color:var(--sub);font-size:16px">@</span>
+      <label style="font-size:12px;color:var(--sub); margin-left: 4px;">Проверь юзернейм</label>
+      <div class="field" style="margin-bottom:24px; margin-top: 8px;">
+        <span style="color:var(--sub);font-size:18px; font-weight: 500;">@</span>
         <input id="search" placeholder="danya">
         <button class="btn" onclick="checkUsername()">Найти</button>
       </div>
@@ -110,193 +86,188 @@
     </div>
     <div class="tabbar">
       <button class="active" onclick="go('main')">🔍 Поиск</button>
+      <button onclick="go('names')">⭐ Именные</button>
+      <button onclick="go('finds')">🍩 Находки</button>
+      <button onclick="go('profile')">👤 Профиль</button>
+      <button onclick="go('admin')" id="adminTab" style="display:none;">🛡️ Админ</button>
+    </div>
+  </section>
+
+  <section class="screen" id="screen-names">
+    <div class="topbar"><div class="brand">Именные ники</div></div>
+    <div class="content">
+      <div id="nameAccessBlock">
+        <div class="card" style="text-align:center; padding: 30px 20px;">
+          <div style="font-size: 46px; margin-bottom: 10px; filter: drop-shadow(0 0 15px rgba(251,191,36,0.4));">⭐</div>
+          <div style="font-weight: 800; font-size: 20px; margin-bottom: 10px; letter-spacing: -0.02em;">Доступно только с Premium</div>
+          <div style="font-size: 13px; color: var(--sub); margin-bottom: 24px; line-height: 1.4;">Подключи Premium, чтобы искать свободные ники по своему имени.</div>
+          <button class="premium-btn" onclick="buyPremium()"><span>1 день</span> <span class="premium-price">10 ⭐</span></button>
+          <button class="premium-btn" onclick="buyPremium()"><span>1 неделя</span> <span class="premium-price">70 ⭐</span></button>
+          <button class="premium-btn" onclick="buyPremium()"><span>1 месяц</span> <span class="premium-price">300 ⭐</span></button>
+          <button class="premium-btn" onclick="buyPremium()" style="border-color: var(--accent);"><span>Навсегда</span> <span class="premium-price">999 ⭐</span></button>
+        </div>
+      </div>
+      <div id="nameSearchBlock" style="display:none;">
+        <label style="font-size:12px;color:var(--sub); margin-left: 4px;">Введи имя</label>
+        <div class="field" style="margin-bottom:24px; margin-top: 8px;">
+          <input id="searchName" placeholder="Например: danya">
+          <button class="btn" onclick="searchByName()">Подобрать</button>
+        </div>
+        <div id="nameResultBox"></div>
+      </div>
+    </div>
+    <div class="tabbar">
+      <button onclick="go('main')">🔍 Поиск</button>
+      <button class="active" onclick="go('names')">⭐ Именные</button>
       <button onclick="go('finds')">🍩 Находки</button>
       <button onclick="go('profile')">👤 Профиль</button>
     </div>
   </section>
 
   <section class="screen" id="screen-finds">
-    <div class="topbar"><div class="brand"><span class="ring"></span>Топ находки</div></div>
+    <div class="topbar"><div class="brand">Находки</div></div>
     <div class="content" id="findsList">Загрузка…</div>
     <div class="tabbar">
       <button onclick="go('main')">🔍 Поиск</button>
+      <button onclick="go('names')">⭐ Именные</button>
       <button class="active" onclick="go('finds')">🍩 Находки</button>
       <button onclick="go('profile')">👤 Профиль</button>
     </div>
   </section>
 
   <section class="screen" id="screen-profile">
-    <div class="topbar"><div class="brand"><span class="ring"></span>Профиль</div></div>
+    <div class="topbar"><div class="brand">Профиль</div></div>
     <div class="content">
       <div class="card" style="margin-bottom:16px">
-        <div style="font-weight:700" id="profileLogin">—</div>
-        <div style="font-size:12px;color:var(--sub);margin-top:2px" id="profileTier">Тариф: Free</div>
-        <button class="btn btn-block" style="margin-top:14px" onclick="buyPremium()">Купить Premium ⭐</button>
+        <div style="font-weight:800; font-size: 18px;" id="profileLogin">—</div>
+        <div style="font-size:12px;color:var(--sub);margin-top:4px; font-weight: 500;" id="profileTier">Тариф: Free</div>
       </div>
-
+      
       <div class="card" style="margin-bottom:16px">
-        <div style="font-weight:700;margin-bottom:10px">🍩 Пригласи друга</div>
-        <div style="font-size:12px;color:var(--sub);margin-bottom:10px">+3 дня Premium тебе и другу за каждого приглашённого</div>
-        <div class="field" style="padding:10px 14px"><span id="refLink" style="font-size:13px;color:var(--text);word-break:break-all">—</span></div>
-        <button class="btn-ghost btn btn-block" style="margin-top:10px" onclick="copyRef()">Скопировать ссылку</button>
-        <div style="font-size:12px;color:var(--sub);margin-top:8px" id="refStats"></div>
-      </div>
-
-      <div class="card" style="margin-bottom:16px">
-        <div style="font-weight:700;margin-bottom:10px">Промокод</div>
-        <div style="font-size:12px;color:var(--sub);margin-bottom:10px">Коды публикуются в канале @bubmagnat</div>
-        <div class="field" style="padding:4px"><input id="promoInput" placeholder="BUBFIND7" style="flex:1;background:transparent;border:none;outline:none;color:var(--text);font-size:15px;padding:12px"><button class="btn" onclick="redeemPromo()">OK</button></div>
+        <div style="font-weight:800;margin-bottom:10px; font-size: 16px;">🍩 Пригласи друга</div>
+        <div style="font-size:12px;color:var(--sub);margin-bottom:14px; line-height: 1.4;">За 5 друзей — бесплатный день Premium</div>
+        <div class="field" style="padding:12px 16px;"><span id="refLink" style="font-size:13px;color:var(--text);word-break:break-all; font-weight: 500;">—</span></div>
+        <button class="btn-ghost btn btn-block" style="margin-top:12px" onclick="copyRef()">Скопировать ссылку</button>
+        <div style="font-size:12px;color:var(--sub);margin-top:12px; font-weight: 500;" id="refStats"></div>
       </div>
 
       <div class="card">
-        <button class="row" onclick="toggleMusic()">
-          <span class="label">🎵 Фоновая музыка</span><span id="musicState">выкл</span>
-        </button>
-        <button class="row" onclick="logout()"><span class="label">Выйти</span><span>›</span></button>
+        <button onclick="logout()" style="display:flex;justify-content:space-between;width:100%;border:none;background:none;color:var(--bad);padding:12px 0;font-size:15px;font-weight: 600;cursor:pointer">Выйти <span>›</span></button>
       </div>
     </div>
     <div class="tabbar">
       <button onclick="go('main')">🔍 Поиск</button>
+      <button onclick="go('names')">⭐ Именные</button>
       <button onclick="go('finds')">🍩 Находки</button>
       <button class="active" onclick="go('profile')">👤 Профиль</button>
     </div>
   </section>
 
+  <section class="screen" id="screen-admin">
+    <div class="topbar"><div class="brand">Админка</div></div>
+    <div class="content">
+      <div class="card" style="margin-bottom: 16px;">
+        <div style="font-weight: 800; margin-bottom: 16px; font-size: 16px;">Все пользователи</div>
+        <div id="adminUsersList">Загрузка...</div>
+      </div>
+      <div class="card" id="adminUserDetail" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <div style="font-weight:800; font-size: 16px;" id="adminDetailName">—</div>
+          <button class="btn-ghost btn" style="padding: 6px 12px; font-size: 12px;" onclick="closeAdminDetail()">Закрыть</button>
+        </div>
+        <div id="adminDetailBody"></div>
+      </div>
+    </div>
+    <div class="tabbar">
+      <button onclick="go('main')">🔍 Поиск</button>
+      <button onclick="go('names')">⭐ Именные</button>
+      <button onclick="go('finds')">🍩 Находки</button>
+      <button onclick="go('profile')">👤 Профиль</button>
+      <button class="active" onclick="go('admin')">🛡️ Админ</button>
+    </div>
+  </section>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-const API_BASE = localStorage.getItem('bubfind_api') || '';
+const API_BASE = '';
 let token = localStorage.getItem('bubfind_token') || null;
 
-function toast(msg){
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 2200);
+function toast(msg){ const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2500); }
+
+async function api(path, opts={}){
+  const res = await fetch(API_BASE + path, { ...opts, headers: { 'Content-Type':'application/json', ...(token ? {Authorization:'Bearer '+token} : {}), ...(opts.headers||{}) } });
+  const data = await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(data.error || 'Ошибка запроса');
+  return data;
 }
 
 function go(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-'+name).classList.add('active');
   if(name==='finds') loadFinds();
+  if(name==='names') checkNameAccess();
   if(name==='profile') loadProfile();
-}
-
-async function api(path, opts={}){
-  const res = await fetch(API_BASE + path, {
-    ...opts,
-    headers: {
-      'Content-Type':'application/json',
-      ...(token ? {Authorization:'Bearer '+token} : {}),
-      ...(opts.headers||{})
-    }
-  });
-  const data = await res.json().catch(()=>({}));
-  if(!res.ok) throw new Error(data.error || 'Ошибка запроса');
-  return data;
-}
-
-function getRefFromUrl(){
-  const p = new URLSearchParams(location.search);
-  return p.get('ref');
+  if(name==='admin') loadAdmin();
 }
 
 async function doLogin(){
   try{
-    const data = await api('/auth/login', {method:'POST', body: JSON.stringify({
-      login: document.getElementById('loginInput').value,
-      password: document.getElementById('passInput').value
-    })});
-    token = data.token; localStorage.setItem('bubfind_token', token);
-    go('main'); enableMusicOnce();
+    const data = await api('/auth/login', {method:'POST', body: JSON.stringify({ login: document.getElementById('loginInput').value, password: document.getElementById('passInput').value })});
+    token = data.token; localStorage.setItem('bubfind_token', token); checkAdminAccess(); toast('Успешный вход 🍩'); go('main');
   }catch(e){ toast(e.message); }
 }
 
 async function doRegister(){
   try{
-    const data = await api('/auth/register', {method:'POST', body: JSON.stringify({
-      login: document.getElementById('loginInput').value,
-      password: document.getElementById('passInput').value,
-      ref: getRefFromUrl()
-    })});
-    token = data.token; localStorage.setItem('bubfind_token', token);
-    toast('Аккаунт создан 🍩');
-    go('main'); enableMusicOnce();
+    const urlParams = new URLSearchParams(window.location.search);
+    const ref = urlParams.get('ref');
+    const data = await api('/auth/register', {method:'POST', body: JSON.stringify({ login: document.getElementById('loginInput').value, password: document.getElementById('passInput').value, ref })});
+    token = data.token; localStorage.setItem('bubfind_token', token); checkAdminAccess(); toast('Аккаунт создан 🍩'); go('main');
   }catch(e){ toast(e.message); }
 }
 
-function logout(){
-  token = null; localStorage.removeItem('bubfind_token');
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById('screen-login').classList.add('active');
-}
+function logout(){ token = null; localStorage.removeItem('bubfind_token'); go('login'); }
+function checkAdminAccess(){ const adminTab = document.getElementById('adminTab'); if (token) adminTab.style.display = 'flex'; }
 
 async function checkUsername(){
-  const u = document.getElementById('search').value.replace('@','').trim();
-  if(!u) return;
-  const box = document.getElementById('resultBox');
-  box.innerHTML = '<div class="card">Проверяю…</div>';
+  const u = document.getElementById('search').value.replace('@','').trim(); if(!u) return;
+  const box = document.getElementById('resultBox'); box.innerHTML = '<div class="card">Проверяю…</div>';
   try{
     const r = await api('/check/'+encodeURIComponent(u));
-    renderResult(r);
-  }catch(e){ box.innerHTML = `<div class="card"><div class="pill bad">⚠ ${e.message}</div></div>`; }
+    if(r.status === 'taken') { box.innerHTML = `<div class="card"><div style="font-size:22px; font-weight:800;">@${r.username}</div><span class="pill bad" style="margin-top:8px;">● Занят</span></div>`; return; }
+    if(r.status === 'free') { box.innerHTML = `<div class="card" style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-size:22px; font-weight:800;">@${r.username}</div><span class="pill ok" style="margin-top:8px;">● Свободен</span></div><div style="font-size:32px;font-weight:800;color:var(--accent); text-shadow: 0 0 15px rgba(111,168,255,0.4);">${r.score}</div></div>`; return; }
+  }catch(e){ box.innerHTML = `<div class="card" style="color:var(--bad)">⚠ ${e.message}</div>`; }
 }
 
-function renderResult(r){
-  const box = document.getElementById('resultBox');
-  if(r.status === 'taken'){
-    box.innerHTML = `<div class="card"><div style="font-size:20px;font-weight:700">@${r.username}</div><div class="pill bad" style="margin-top:8px">● Занят</div></div>`;
-    return;
-  }
-  if(r.status === 'invalid_format'){
-    box.innerHTML = `<div class="card"><div class="pill bad">Некорректный формат</div></div>`;
-    return;
-  }
-  const statusPill = r.status==='free'
-    ? '<span class="pill ok">● Свободен</span>'
-    : r.status==='fragment_sale'
-      ? `<span class="pill lock">💎 Fragment · ${r.price||'?'} TON</span>`
-      : '<span class="pill lock">🔒 Fragment, не продаётся</span>';
-
-  const breakdown = r.score_breakdown ? Object.entries(r.score_breakdown).map(([k,v])=>
-    `<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--sub)">${k}</span><span style="font-weight:600">${v>0?'+':''}${v}</span></div>`
-  ).join('') : '';
-
-  box.innerHTML = `
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start">
-        <div><div style="font-size:22px;font-weight:700">@${r.username}</div><div style="margin-top:6px">${statusPill}</div></div>
-        <div style="text-align:right"><div style="font-size:11px;color:var(--sub)">Score</div><div style="font-size:28px;font-weight:800;color:var(--accent)">${r.score??'—'}</div></div>
-      </div>
-      <div style="margin-top:16px;height:1px;background:var(--border)"></div>
-      <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">${breakdown}</div>
-      <button class="btn btn-block" style="margin-top:16px;background:#f2f2f5;color:#0a0a0e" onclick="claimUsername('${r.username}')">Занять юзернейм</button>
-    </div>`;
+async function checkNameAccess(){
+  if(!token) return;
+  try { 
+    // Проверка на премиум (заглушка)
+    document.getElementById('nameAccessBlock').style.display = 'none'; 
+    document.getElementById('nameSearchBlock').style.display = 'block'; 
+  } catch(e) { console.error(e); }
 }
 
-async function claimUsername(username){
+async function searchByName(){
+  const name = document.getElementById('searchName').value.trim(); if(!name) return;
+  const box = document.getElementById('nameResultBox'); box.innerHTML = '<div class="card">Ищу...</div>';
   try{
-    await api('/pool/claim/'+encodeURIComponent(username), {method:'POST'});
-    toast('Юзернейм забронирован 🍩');
-  }catch(e){ toast(e.message); }
+    const r = await api('/search-by-name/'+encodeURIComponent(name));
+    if(r.results.length === 0) { box.innerHTML = '<div class="card">Не найдено 😔</div>'; return; }
+    box.innerHTML = r.results.map(item => `<div class="card" style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;"><div style="font-weight:800;font-size:18px">@${item.username}</div><div style="background:rgba(74,222,128,0.15);border: 1px solid rgba(74,222,128,0.2);color:var(--ok);padding:6px 12px;border-radius:12px;font-weight:700">Score: ${item.score}</div></div>`).join('');
+  }catch(e){ box.innerHTML = `<div class="card" style="color:var(--bad)">⚠ ${e.message}</div>`; }
 }
+
+function buyPremium(){ toast('Переход в бота...'); window.location.href = 'https://t.me/skupgoldi25gfor1starbot?start=buy'; }
 
 async function loadFinds(){
   const list = document.getElementById('findsList');
   try{
     const rows = await api('/pool/top-finds');
-    if(!rows.length){ list.innerHTML = '<div class="card">Пока пусто — сканер ищет 🍩</div>'; return; }
-    list.innerHTML = rows.map(r=>`
-      <div class="card" style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <div style="font-weight:700">@${r.username}</div>
-          <div style="font-size:11px;margin-top:4px;color:${r.status==='free'?'var(--ok)':'var(--accent)'}">
-            ${r.status==='free' ? '● Свободен' : '💎 '+(r.fragment_price?r.fragment_price+' TON':'Fragment')}
-          </div>
-        </div>
-        <div style="text-align:right"><div style="font-size:18px;font-weight:800;color:var(--accent)">${r.score}</div></div>
-      </div>`).join('');
+    if(!rows.length){ list.innerHTML = '<div class="card">Пока пусто 🍩</div>'; return; }
+    list.innerHTML = rows.map(r=>`<div class="card" style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:800; font-size: 18px;">@${r.username}</div></div><div style="font-size:20px;font-weight:800;color:var(--accent); text-shadow: 0 0 10px rgba(111,168,255,0.4);">${r.score}</div></div>`).join('');
   }catch(e){ list.innerHTML = `<div class="card">${e.message}</div>`; }
 }
 
@@ -308,43 +279,31 @@ async function loadProfile(){
   }catch(e){}
 }
 
-function copyRef(){
-  const text = document.getElementById('refLink').textContent;
-  navigator.clipboard?.writeText(text);
-  toast('Ссылка скопирована');
+function copyRef(){ const text = document.getElementById('refLink').textContent; navigator.clipboard?.writeText(text); toast('Ссылка скопирована'); }
+
+async function loadAdmin(){
+  const list = document.getElementById('adminUsersList');
+  try {
+    const users = await api('/admin/users');
+    list.innerHTML = users.map(u => `<div class="user-row" onclick="openUserDetail(${u.id})"><div><div style="font-weight:700; font-size: 15px;">@${u.telegram_id}</div><div style="font-size:11px;color:var(--sub); font-weight: 500; margin-top:2px;">${u.tier.toUpperCase()}</div></div><div style="font-size:12px;color:var(--sub); font-weight: 500;">ID: ${u.id}</div></div>`).join('');
+  } catch(e) { list.innerHTML = `<span style="color:var(--bad)">${e.message}</span>`; }
 }
 
-async function redeemPromo(){
-  const code = document.getElementById('promoInput').value.trim();
-  if(!code) return;
-  try{
-    const r = await api('/promo/redeem', {method:'POST', body: JSON.stringify({code})});
-    toast('Начислено: '+r.granted+' 🍩');
-  }catch(e){ toast(e.message); }
+async function openUserDetail(userId){
+  try {
+    const data = await api('/admin/user/' + userId);
+    document.getElementById('adminUsersList').parentElement.style.display = 'none';
+    document.getElementById('adminUserDetail').style.display = 'block';
+    document.getElementById('adminDetailName').textContent = '@' + data.user.telegram_id + ' (' + data.user.tier + ')';
+    let claimedHtml = '<div style="font-size:12px;color:var(--sub);margin-bottom:16px; font-weight: 500;">Ников забрано: ' + data.claimed.length + '</div>';
+    if (data.claimed.length > 0) { claimedHtml += data.claimed.map(c => `<div style="display:flex; justify-content:space-between; border-bottom:1px solid var(--border); padding: 8px 0;"><span style="font-weight: 500;">@${c.username}</span><span style="color:var(--accent); font-weight: 700;">${c.score}</span></div>`).join(''); }
+    document.getElementById('adminDetailBody').innerHTML = claimedHtml;
+  } catch(e) { toast(e.message); }
 }
 
-async function buyPremium(){
-  try{
-    const r = await api('/premium/purchase-link');
-    location.href = r.url;
-  }catch(e){ toast(e.message); }
-}
+function closeAdminDetail(){ document.getElementById('adminUsersList').parentElement.style.display = 'block'; document.getElementById('adminUserDetail').style.display = 'none'; }
 
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(()=>{});
-}
-
-let musicOn = false;
-function enableMusicOnce(){
-  const audio = document.getElementById('bgMusic');
-  audio.volume = 0.12;
-}
-function toggleMusic(){
-  const audio = document.getElementById('bgMusic');
-  musicOn = !musicOn;
-  if(musicOn){ audio.play().catch(()=>{}); } else { audio.pause(); }
-  document.getElementById('musicState').textContent = musicOn ? 'вкл' : 'выкл';
-}
+if(token) { checkAdminAccess(); go('main'); }
 </script>
 </body>
 </html>
