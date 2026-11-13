@@ -29,7 +29,10 @@ init().then((database) => {
     if (!login || !password) return res.status(400).json({ error: 'Заполни все поля' });
     try {
       const info = global.db.prepare('INSERT INTO users (telegram_id, tier, created_at, coins) VALUES (?, ?, ?, ?)').run(login, 'free', Date.now(), 30);
-      const token = jwt.sign({ userId: info.lastInsertRowid }, process.env.JWT_SECRET || 'super_secret_key_12345', { expiresIn: '7d' });
+      const userId = info.lastInsertRowid;
+      const code = Math.random().toString(36).slice(2, 8).toUpperCase();
+      global.db.prepare('INSERT INTO referrals (user_id, code, created_at) VALUES (?, ?, ?)').run(userId, code, Date.now());
+      const token = jwt.sign({ userId }, process.env.JWT_SECRET || 'super_secret_key_12345', { expiresIn: '7d' });
       res.json({ token, coins: 30 });
     } catch (e) { res.status(500).json({ error: 'Логин занят' }); }
   });
@@ -42,7 +45,6 @@ init().then((database) => {
     res.json({ token, tier: user.tier, coins: user.coins, profile_username: user.profile_username });
   });
 
-  // --- ИМЕННОЙ ПОИСК (20 ЮК) ---
   app.get('/search-by-name/:name', requireAuth, async (req, res) => {
     const user = global.db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
     if (user.coins < 20) return res.status(403).json({ error: 'Недостаточно ЮК (нужно 20)' });
@@ -69,7 +71,6 @@ init().then((database) => {
     res.json({ base: baseName, results, coinsLeft: user.coins - 20 });
   });
 
-  // --- РАНДОМ ГЕНЕРАТОР (10 ЮК) ---
   app.get('/generate-random', requireAuth, async (req, res) => {
     const user = global.db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
     if (user.coins < 10) return res.status(403).json({ error: 'Недостаточно ЮК' });
@@ -77,31 +78,28 @@ init().then((database) => {
     global.db.prepare('UPDATE users SET coins = coins - 10 WHERE id = ?').run(user.id);
 
     const chars = 'abcdefghiklmnoprstuvwxy';
-    const results = [];
-    
-    for (let i = 0; i < 5; i++) {
-      let randomUsername = '';
-      for (let j = 0; j < 5; j++) {
-        randomUsername += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      
-      const check = await fullUsernameCheck(randomUsername);
-      if (check.status === 'free') {
-        const { total } = evaluateUsername(randomUsername);
-        results.push({ username: randomUsername, score: total });
-      }
+    let randomUsername = '';
+    for (let j = 0; j < 5; j++) {
+      randomUsername += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     
-    results.sort((a, b) => b.score - a.score);
-    res.json({ results, coinsLeft: user.coins - 10 });
+    const check = await fullUsernameCheck(randomUsername);
+    let score = 0;
+    let status = 'taken';
+
+    if (check.status === 'free') {
+      const evalResult = evaluateUsername(randomUsername);
+      score = evalResult.total;
+      status = 'free';
+    }
+    
+    res.json({ result: { username: randomUsername, score, status }, coinsLeft: user.coins - 10 });
   });
 
-  // --- НАХОДКИ ---
   app.get('/pool/top-finds', (req, res) => {
     res.json(global.db.prepare(`SELECT * FROM found_usernames WHERE is_hidden = 0 ORDER BY score DESC LIMIT 50`).all());
   });
 
-  // --- ПРОФИЛЬ ---
   app.post('/user/set-username', requireAuth, (req, res) => {
     const { username } = req.body;
     const check = global.db.prepare('SELECT * FROM found_usernames WHERE username = ? AND is_hidden = 0').get(username);
@@ -111,15 +109,24 @@ init().then((database) => {
     res.json({ ok: true });
   });
 
-  // --- МЕССЕНДЖЕР ---
-  app.post('/messages/send', requireAuth, (req, res) => {
-    const { receiver_id, text } = req.body;
-    if (!receiver_id || !text) return res.status(400).json({ error: 'Пустое сообщение' });
-    global.db.prepare('INSERT INTO messages (sender_id, receiver_id, text, created_at) VALUES (?, ?, ?, ?)').run(req.user.id, receiver_id, text, Date.now());
+  app.get('/referral/me', requireAuth, (req, res) => {
+    const row = global.db.prepare('SELECT code FROM referrals WHERE user_id = ?').get(req.user.id);
+    if (!row) return res.status(404).json({ error: 'Реф. код не найден' });
+    res.json({ code: row.code, link: `${APP_URL}/r/${row.code}`, invited: 0 });
+  });
+
+  app.post('/promo/redeem', requireAuth, (req, res) => {
+    const { code } = req.body;
+    const promo = global.db.prepare('SELECT * FROM promo_codes WHERE code = ? AND uses_left > 0').get(code);
+    if (!promo) return res.status(404).json({ error: 'Промокод не найден' });
+    
+    if (promo.type === 'coins') {
+      global.db.prepare('UPDATE users SET coins = coins + ? WHERE id = ?').run(promo.value, req.user.id);
+    }
+    global.db.prepare('UPDATE promo_codes SET uses_left = uses_left - 1 WHERE code = ?').run(code);
     res.json({ ok: true });
   });
 
-  // --- ТОПЫ ---
   app.get('/top/users', (req, res) => {
     const users = global.db.prepare('SELECT telegram_id, coins FROM users ORDER BY coins DESC LIMIT 10').all();
     res.json(users);
@@ -134,13 +141,6 @@ init().then((database) => {
       ORDER BY count DESC LIMIT 10
     `).all();
     res.json(hunters);
-  });
-
-  // --- РЕФЕРАЛКИ И ОПЛАТА ---
-  app.get('/referral/me', requireAuth, (req, res) => {
-    const row = global.db.prepare('SELECT code FROM referrals WHERE user_id = ?').get(req.user.id);
-    if (!row) return res.status(404).json({ error: 'Реф. код не найден' });
-    res.json({ code: row.code, link: `${APP_URL}/r/${row.code}`, invited: 0 });
   });
 
   app.post('/auth/premium-webhook', (req, res) => {
