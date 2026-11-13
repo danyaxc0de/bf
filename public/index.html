@@ -4,14 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>BubFind</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
 <style>
   :root{ --bg:#000000; --card: rgba(255, 255, 255, 0.06); --border: rgba(255, 255, 255, 0.1); --text:#ffffff; --sub:#8e8e93; --accent:#0a84ff; --accent2:#005bb5; --ok:#32d74b; --bad:#ff453a; --star:#ffd60a; }
   *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',sans-serif;-webkit-tap-highlight-color:transparent;}
   html,body{height:100%;background:var(--bg);color:var(--text);overflow:hidden}
   body{ background: radial-gradient(circle at 50% 0%, rgba(10, 132, 255, 0.1), transparent 60%), var(--bg); }
-  
-  input[type="password"] { -webkit-text-security: disc; color: white; }
   
   #app{position:relative;z-index:1;max-width:460px;margin:0 auto;height:100vh;display:flex;flex-direction:column}
   .screen{display:none;flex-direction:column;flex:1;min-height:0;animation:slideIn .3s ease-out}
@@ -36,7 +35,7 @@
   
   .btn{ background: var(--accent); border: none; color:#fff;font-weight:600;font-size:13px;border-radius:12px;padding:10px 16px;cursor:pointer; transition: 0.2s; }
   .btn:active { transform: scale(0.96); opacity: 0.8; }
-  .btn-block{width:100%;padding:14px;border-radius:14px;font-size:15px; margin-bottom: 8px;}
+  .btn-block{width:100%;padding:14px;border-radius:14px;font-size:15px; margin-bottom: 12px;}
   
   .tabbar{ position: fixed; bottom: calc(env(safe-area-inset-bottom, 10px) + 10px); left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; display:flex;justify-content:space-around;align-items:center; padding: 8px 10px; background: var(--card); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 24px; z-index: 100; }
   .tabbar button{ background:none;border:none;color:var(--sub); display:flex;flex-direction:column;align-items:center;justify-content:center; width: 50px; height: 45px; border-radius: 16px; cursor:pointer; transition: 0.2s; }
@@ -51,31 +50,24 @@
 </head>
 <body>
 
-<!-- ФОНОВАЯ МУЗЫКА (Metamorphosis) -->
 <audio id="bgMusic" loop preload="none">
   <source src="https://cdn.discordapp.com/attachments/1075069633572397076/1123456789012345678/Interworld_-_Metamorphosis.mp3" type="audio/mpeg">
 </audio>
 
 <div id="app">
-  <section class="screen active" id="screen-login">
-    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:24px">
-      <div style="width:80px;height:80px;border-radius:24px;background:var(--accent); box-shadow: 0 10px 30px rgba(10, 132, 255, 0.3);"></div>
-      <div style="margin-top:20px;font-size:28px;font-weight:900;">BubFind</div>
-      <div style="margin-top:6px;font-size:13px;color:var(--sub);">Находи свободные юзернеймы</div>
-    </div>
-    <div style="padding:0 24px 24px;display:flex;flex-direction:column;gap:10px">
-      <input id="loginInput" class="field glass" style="padding:14px;" placeholder="Логин">
-      <input id="passInput" type="password" class="field glass" style="padding:14px; color: #ffffff;" placeholder="Пароль">
-      <button class="btn btn-block" onclick="doLogin()">Войти</button>
-      <button class="btn btn-block" style="background:transparent;border:1px solid var(--border);color:var(--text);" onclick="doRegister()">Создать аккаунт</button>
+  <!-- ЭКРАН ЗАГРУЗКИ -->
+  <section class="screen active" id="screen-loading">
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;">
+      <div style="font-size:24px;font-weight:900;">Загрузка...</div>
     </div>
   </section>
 
+  <!-- ПОИСК -->
   <section class="screen" id="screen-main">
     <div class="topbar">
       <div class="brand">BubFind</div>
       <div style="display:flex; align-items:center; gap:10px;">
-        <div class="badge coins" onclick="showNoCoins()">
+        <div class="badge coins">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H8v-2h3V8h2v3h3v2h-3v4h-2z"/></svg>
           <span id="coinCount">30</span>
         </div>
@@ -111,6 +103,7 @@
     </div>
   </section>
 
+  <!-- НАХОДКИ -->
   <section class="screen" id="screen-finds">
     <div class="topbar"><div class="brand">Находки</div></div>
     <div class="content" id="findsList">Загрузка…</div>
@@ -122,6 +115,7 @@
     </div>
   </section>
 
+  <!-- ТОПЫ -->
   <section class="screen" id="screen-tops">
     <div class="topbar"><div class="brand">Топы</div></div>
     <div class="content">
@@ -142,6 +136,7 @@
     </div>
   </section>
 
+  <!-- ПРОФИЛЬ -->
   <section class="screen" id="screen-profile">
     <div class="topbar"><div class="brand">Профиль</div></div>
     <div class="content">
@@ -152,11 +147,6 @@
           <span style="font-size: 12px; color: var(--sub);">Выбранный ник:</span>
           <span style="font-weight: 900; color: var(--accent); font-size: 16px; margin-left: 5px;" id="profileUsername">—</span>
         </div>
-      </div>
-
-      <!-- Кнопка Музыки -->
-      <div class="card glass" style="margin-bottom:16px">
-        <button class="btn btn-block" style="background: transparent; border: 1px solid var(--border); color: var(--text);" onclick="toggleMusic()" id="musicBtn">🎵 Включить музыку</button>
       </div>
 
       <div class="card glass" style="margin-bottom:16px">
@@ -172,8 +162,6 @@
         </div>
         <button class="btn btn-block" onclick="redeemPromo()">Активировать</button>
       </div>
-
-      <button onclick="logout()" style="background:none; border:none; color:var(--bad); font-size:13px; cursor:pointer; margin-top:20px; width:100%;">Выйти</button>
     </div>
     <div class="tabbar">
       <button onclick="go('main')"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></button>
@@ -190,60 +178,170 @@
 const API_BASE = '';
 let token = localStorage.getItem('bubfind_token') || null;
 let currentCoins = 30;
+const tg = window.Telegram?.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
 
-// --- ЗВУКИ КЛИКОВ ---
-const AudioContext = window.AudioContext || window.webkitAudioContext;
-const audioCtx = new AudioContext();
-
-function playClickSound() {
-  if (audioCtx.state === 'suspended') audioCtx.resume();
-  const osc = audioCtx.createOscillator();
-  const gainNode = audioCtx.createGain();
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(600, audioCtx.currentTime);
-  osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.05);
-  gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-  gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
-  osc.connect(gainNode);
-  gainNode.connect(audioCtx.destination);
-  osc.start();
-  osc.stop(audioCtx.currentTime + 0.05);
+function toast(msg){ const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2500); }
+async function api(path, opts={}){ 
+  const res = await fetch(API_BASE + path, { ...opts, headers: { 'Content-Type':'application/json', ...(token ? {Authorization:'Bearer '+token} : {}), ...(opts.headers||{}) } }); 
+  const data = await res.json().catch(()=>({})); 
+  if(!res.ok) throw new Error(data.error || 'Ошибка'); 
+  return data; 
+}
+function updateCoinsUI() { document.getElementById('coinCount').textContent = currentCoins; }
+function go(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  if(name==='finds') loadFinds();
+  if(name==='profile') loadProfile();
+  if(name==='tops') loadTops();
 }
 
-document.addEventListener('click', (e) => {
-  if (e.target.closest('button') || e.target.closest('.tabbar button') || e.target.closest('.card')) {
-    playClickSound();
-  }
-});
-
-// --- МУЗЫКА ---
-const bgMusic = document.getElementById('bgMusic');
-
-document.body.addEventListener('click', () => {
-  if (bgMusic.paused && localStorage.getItem('music_on') !== 'false') {
-    bgMusic.volume = 0.15; // ТИХАЯ ГРОМКОСТЬ
-    bgMusic.play().then(() => updateMusicBtn()).catch(()=>{});
-  }
-}, { once: true });
-
-function toggleMusic() {
-  if (bgMusic.paused) {
-    bgMusic.play().catch(()=>{});
-    localStorage.setItem('music_on', 'true');
+async function autoLogin() {
+  if (tg && tg.initData) {
+    try {
+      const res = await fetch(API_BASE + '/auth/telegram-webapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData: tg.initData })
+      });
+      const data = await res.json();
+      if (data.token) {
+        token = data.token; localStorage.setItem('bubfind_token', token);
+        currentCoins = data.coins; updateCoinsUI();
+        document.getElementById('userTierBadge').textContent = data.tier.toUpperCase();
+        go('main');
+      }
+    } catch(e) { toast('Ошибка входа'); }
   } else {
-    bgMusic.pause();
-    localStorage.setItem('music_on', 'false');
+    toast('Открой через Telegram-бота!');
   }
-  updateMusicBtn();
+}
+autoLogin();
+
+function switchMode(mode) {
+  document.getElementById('tabRandom').classList.toggle('active', mode === 'random');
+  document.getElementById('tabName').classList.toggle('active', mode === 'name');
+  document.getElementById('modeRandom').style.display = mode === 'random' ? 'block' : 'none';
+  document.getElementById('modeName').style.display = mode === 'name' ? 'block' : 'none';
+  document.getElementById('nameResultBox').innerHTML = '';
 }
 
-function updateMusicBtn() {
-  const btn = document.getElementById('musicBtn');
-  if (btn) btn.textContent = bgMusic.paused ? '🎵 Включить музыку' : '🔇 Выключить музыку';
+function getRarity(score) {
+  if (score >= 80) return { name: "ЛЕГЕНДАРНЫЙ", color: "#ffd60a" };
+  if (score >= 60) return { name: "ЭПИЧЕСКИЙ", color: "#5e5ce6" };
+  if (score >= 40) return { name: "РЕДКИЙ", color: "#0a84ff" };
+  return { name: "БАЗОВЫЙ", color: "#8e8e93" };
 }
 
-// ... ОСТАЛЬНОЙ JS (ЛОГИН, ПОИСК, ПРОФИЛЬ, ТОПЫ) БЕЗ ИЗМЕНЕНИЙ ...
-// (Просто скопируй функции из прошлого сообщения, начиная с function toast)
+async function searchByName(){
+  const name = document.getElementById('searchName').value.trim(); if(!name) return;
+  if (currentCoins < 20) { toast('Мало ЮК'); return; }
+
+  const box = document.getElementById('nameResultBox'); box.innerHTML = '<div class="card glass">Ищу...</div>';
+  try{
+    const r = await api('/search-by-name/'+encodeURIComponent(name));
+    currentCoins = r.coinsLeft; updateCoinsUI();
+
+    if(r.results.length === 0) { box.innerHTML = '<div class="card glass">Не найдено</div>'; return; }
+
+    box.innerHTML = r.results.map(item => {
+      const rarity = getRarity(item.score);
+      return `<div class="card glass" style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;border-color:${rarity.color}">
+        <div><div style="font-weight:800;font-size:18px">@${item.username}</div><div style="font-size:10px; color:${rarity.color}; font-weight:800; margin-top:2px;">${rarity.name}</div></div>
+        <div style="color:${rarity.color}; font-weight:900">${item.score}</div>
+      </div>`;
+    }).join('');
+  }catch(e){ box.innerHTML = `<div class="card glass" style="color:var(--bad)">⚠ ${e.message}</div>`; }
+}
+
+async function generateRandom(){
+  if (currentCoins < 10) { toast('Мало ЮК'); return; }
+  
+  const box = document.getElementById('nameResultBox'); box.innerHTML = '<div class="card glass">Ищу...</div>';
+  try {
+    const r = await api('/generate-random');
+    currentCoins = r.coinsLeft; updateCoinsUI();
+    
+    const item = r.result;
+    const rarity = getRarity(item.score);
+    
+    if (item.status !== 'free') {
+      box.innerHTML = `<div class="card glass" style="text-align:center;border-color:var(--bad)"><div style="font-size:18px;color:var(--sub)">@${item.username}</div><div style="font-weight:800;color:var(--bad);margin-top:8px;">Занят</div></div>`;
+      return;
+    }
+
+    box.innerHTML = `
+      <div class="card glass" style="text-align:center; padding: 30px 20px; border-color:${rarity.color}">
+        <div style="font-size:10px; color:${rarity.color}; font-weight:800; margin-bottom:5px;">${rarity.name}</div>
+        <div style="font-weight:900;font-size:32px; margin-bottom:10px;">@${item.username}</div>
+        <div style="font-weight:900;color:${rarity.color}; font-size:24px;">Score: ${item.score}</div>
+      </div>`;
+  } catch(e) { box.innerHTML = `<div class="card glass" style="color:var(--bad)">⚠ ${e.message}</div>`; }
+}
+
+async function loadFinds(){
+  const list = document.getElementById('findsList');
+  try{
+    const rows = await api('/pool/top-finds');
+    if(!rows.length){ list.innerHTML = '<div class="card glass">Пусто</div>'; return; }
+    list.innerHTML = rows.map(r => {
+      const rarity = getRarity(r.score);
+      return `<div class="card glass" style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;border-color:${rarity.color}">
+        <div><div style="font-weight:800; font-size: 16px;">@${r.username}</div><div style="font-size:10px; color:${rarity.color}; font-weight:800; margin-top:2px;">${rarity.name}</div></div>
+        <div style="font-weight:900;color:${rarity.color};">${r.score}</div>
+      </div>`;
+    }).join('');
+  }catch(e){ list.innerHTML = `<div class="card glass">${e.message}</div>`; }
+}
+
+async function loadProfile(){
+  document.getElementById('profileLogin').textContent = localStorage.getItem('bubfind_login') || 'User';
+  document.getElementById('profileTier').textContent = localStorage.getItem('bubfind_tier') === 'premium' ? 'Тариф: Premium' : 'Тариф: Free';
+  
+  try {
+    const ref = await api('/referral/me');
+    document.getElementById('refLink').textContent = ref.link;
+  } catch(e) {}
+}
+
+async function loadTops() {
+  try {
+    const users = await api('/top/users');
+    document.getElementById('topUsersList').innerHTML = users.map((u, i) => `
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="font-weight:600">${i+1}. @${u.telegram_id}</div>
+        <div style="color:var(--accent);font-weight:700">${u.coins} ЮК</div>
+      </div>
+    `).join('');
+  } catch(e) { document.getElementById('topUsersList').textContent = 'Ошибка'; }
+
+  try {
+    const hunters = await api('/top/hunters');
+    document.getElementById('topHuntersList').innerHTML = hunters.map((u, i) => `
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="font-weight:600">${i+1}. @${u.claimed_by}</div>
+        <div style="color:var(--accent);font-weight:700">${u.count} шт.</div>
+      </div>
+    `).join('');
+  } catch(e) { document.getElementById('topHuntersList').textContent = 'Ошибка'; }
+}
+
+async function redeemPromo() {
+  const code = document.getElementById('promoInput').value.trim();
+  if(!code) return;
+  try {
+    await api('/promo/redeem', { method: 'POST', body: JSON.stringify({ code }) });
+    toast('Активирован!');
+    document.getElementById('promoInput').value = '';
+  } catch(e) { toast(e.message); }
+}
+
+function copyRef() {
+  const text = document.getElementById('refLink').textContent;
+  navigator.clipboard?.writeText(text);
+  toast('Скопировано');
+}
 </script>
 </body>
-</html>
+  </html>
