@@ -42,14 +42,15 @@ init().then((database) => {
     res.json({ token, tier: user.tier, coins: user.coins, profile_username: user.profile_username });
   });
 
+  // --- ИМЕННОЙ ПОИСК (20 ЮК) ---
   app.get('/search-by-name/:name', requireAuth, async (req, res) => {
     const user = global.db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
-    if (user.coins < 10) return res.status(403).json({ error: 'Недостаточно ЮК' });
+    if (user.coins < 20) return res.status(403).json({ error: 'Недостаточно ЮК (нужно 20)' });
 
     const baseName = req.params.name.toLowerCase().replace(/[^a-z0-9_]/g, '');
     if (baseName.length < 2) return res.status(400).json({ error: 'Имя короткое' });
 
-    global.db.prepare('UPDATE users SET coins = coins - 10 WHERE id = ?').run(user.id);
+    global.db.prepare('UPDATE users SET coins = coins - 20 WHERE id = ?').run(user.id);
 
     const variations = [baseName + '1', baseName + '7', baseName + '0', baseName + '9', baseName + '77', baseName + '228', baseName + 'x', baseName + 'pro', baseName + 'top', baseName + 'vip'];
     const results = [];
@@ -65,13 +66,42 @@ init().then((database) => {
     }
     
     results.sort((a, b) => b.score - a.score);
-    res.json({ base: baseName, results, coinsLeft: user.coins - 10 });
+    res.json({ base: baseName, results, coinsLeft: user.coins - 20 });
   });
 
+  // --- РАНДОМ ГЕНЕРАТОР (10 ЮК) ---
+  app.get('/generate-random', requireAuth, async (req, res) => {
+    const user = global.db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+    if (user.coins < 10) return res.status(403).json({ error: 'Недостаточно ЮК' });
+
+    global.db.prepare('UPDATE users SET coins = coins - 10 WHERE id = ?').run(user.id);
+
+    const chars = 'abcdefghiklmnoprstuvwxy';
+    const results = [];
+    
+    for (let i = 0; i < 5; i++) {
+      let randomUsername = '';
+      for (let j = 0; j < 5; j++) {
+        randomUsername += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      
+      const check = await fullUsernameCheck(randomUsername);
+      if (check.status === 'free') {
+        const { total } = evaluateUsername(randomUsername);
+        results.push({ username: randomUsername, score: total });
+      }
+    }
+    
+    results.sort((a, b) => b.score - a.score);
+    res.json({ results, coinsLeft: user.coins - 10 });
+  });
+
+  // --- НАХОДКИ ---
   app.get('/pool/top-finds', (req, res) => {
     res.json(global.db.prepare(`SELECT * FROM found_usernames WHERE is_hidden = 0 ORDER BY score DESC LIMIT 50`).all());
   });
 
+  // --- ПРОФИЛЬ ---
   app.post('/user/set-username', requireAuth, (req, res) => {
     const { username } = req.body;
     const check = global.db.prepare('SELECT * FROM found_usernames WHERE username = ? AND is_hidden = 0').get(username);
@@ -81,6 +111,7 @@ init().then((database) => {
     res.json({ ok: true });
   });
 
+  // --- МЕССЕНДЖЕР ---
   app.post('/messages/send', requireAuth, (req, res) => {
     const { receiver_id, text } = req.body;
     if (!receiver_id || !text) return res.status(400).json({ error: 'Пустое сообщение' });
@@ -88,6 +119,7 @@ init().then((database) => {
     res.json({ ok: true });
   });
 
+  // --- ТОПЫ ---
   app.get('/top/users', (req, res) => {
     const users = global.db.prepare('SELECT telegram_id, coins FROM users ORDER BY coins DESC LIMIT 10').all();
     res.json(users);
@@ -104,6 +136,7 @@ init().then((database) => {
     res.json(hunters);
   });
 
+  // --- РЕФЕРАЛКИ И ОПЛАТА ---
   app.get('/referral/me', requireAuth, (req, res) => {
     const row = global.db.prepare('SELECT code FROM referrals WHERE user_id = ?').get(req.user.id);
     if (!row) return res.status(404).json({ error: 'Реф. код не найден' });
