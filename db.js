@@ -11,7 +11,7 @@ async function downloadDb() {
       if (res.statusCode === 200) {
         const file = fs.createWriteStream(DB_PATH);
         res.pipe(file);
-        file.on('finish', () => { file.close(); console.log('База скачана с GitHub.'); resolve(); });
+        file.on('finish', () => { file.close(); console.log('База скачана.'); resolve(); });
       } else { resolve(); }
     }).on('error', () => resolve());
   });
@@ -23,11 +23,8 @@ async function uploadDb() {
   const data = JSON.stringify({ message: 'Update database', content: content, sha: await getFileSha() });
 
   return new Promise((resolve) => {
-    const options = {
-      hostname: 'api.github.com', path: `/repos/${process.env.GITHUB_REPO}/contents/app.db`, method: 'PUT',
-      headers: { 'Authorization': `token ${process.env.GITHUB_TOKEN}`, 'User-Agent': 'Node.js', 'Content-Type': 'application/json', 'Content-Length': data.length }
-    };
-    const req = https.request(options, (res) => { res.on('data', () => {}); res.on('end', () => { console.log('База загружена на GitHub.'); resolve(); }); });
+    const options = { hostname: 'api.github.com', path: `/repos/${process.env.GITHUB_REPO}/contents/app.db`, method: 'PUT', headers: { 'Authorization': `token ${process.env.GITHUB_TOKEN}`, 'User-Agent': 'Node.js', 'Content-Type': 'application/json', 'Content-Length': data.length } };
+    const req = https.request(options, (res) => { res.on('data', () => {}); res.on('end', () => { console.log('База загружена.'); resolve(); }); });
     req.write(data); req.end();
   });
 }
@@ -46,10 +43,18 @@ async function init() {
   db.pragma('journal_mode = WAL');
 
   db.exec(`
-    CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, telegram_id TEXT UNIQUE NOT NULL, tier TEXT NOT NULL DEFAULT 'free', created_at INTEGER NOT NULL, premium_until INTEGER, coins INTEGER DEFAULT 30);
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, 
+      telegram_id TEXT UNIQUE NOT NULL, 
+      tier TEXT NOT NULL DEFAULT 'free', 
+      created_at INTEGER NOT NULL, 
+      premium_until INTEGER,
+      coins INTEGER DEFAULT 30,
+      profile_username TEXT
+    );
     CREATE TABLE IF NOT EXISTS found_usernames (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE NOT NULL, length INTEGER NOT NULL, score INTEGER NOT NULL, score_breakdown TEXT, status TEXT NOT NULL DEFAULT 'free', fragment_price TEXT, found_at INTEGER NOT NULL, last_checked_at INTEGER NOT NULL, is_hidden INTEGER DEFAULT 0, claimed_by TEXT);
     CREATE TABLE IF NOT EXISTS referrals (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER UNIQUE NOT NULL, code TEXT UNIQUE NOT NULL, referred_by_code TEXT, created_at INTEGER NOT NULL);
-    CREATE TABLE IF NOT EXISTS promo_codes (code TEXT PRIMARY KEY, type TEXT NOT NULL, value INTEGER NOT NULL, uses_left INTEGER NOT NULL, created_at INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY AUTOINCREMENT, sender_id INTEGER NOT NULL, receiver_id INTEGER NOT NULL, text TEXT NOT NULL, created_at INTEGER NOT NULL);
   `);
   
   setInterval(uploadDb, 120000);
