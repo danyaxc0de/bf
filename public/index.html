@@ -238,16 +238,21 @@ async function checkUsername(){
     const r = await api('/check/'+encodeURIComponent(u));
     if(r.status === 'taken') { box.innerHTML = `<div class="card"><div style="font-size:22px; font-weight:800;">@${r.username}</div><span class="pill bad" style="margin-top:8px;">● Занят</span></div>`; return; }
     if(r.status === 'free') { box.innerHTML = `<div class="card" style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-size:22px; font-weight:800;">@${r.username}</div><span class="pill ok" style="margin-top:8px;">● Свободен</span></div><div style="font-size:32px;font-weight:800;color:var(--accent); text-shadow: 0 0 15px rgba(111,168,255,0.4);">${r.score}</div></div>`; return; }
-  }catch(e){ box.innerHTML = `<div class="card" style="color:var(--bad)">⚠ ${e.message}</div>`; }
+  }catch(e){ 
+    if (e.message.includes('Токен') || e.message.includes('авторизация')) { logout(); }
+    box.innerHTML = `<div class="card" style="color:var(--bad)">⚠ ${e.message}</div>`; 
+  }
 }
 
 async function checkNameAccess(){
   if(!token) return;
   try { 
-    // Проверка на премиум (заглушка)
+    const r = await api('/check/danya'); // Просто тестовый запрос, чтобы проверить токен
     document.getElementById('nameAccessBlock').style.display = 'none'; 
     document.getElementById('nameSearchBlock').style.display = 'block'; 
-  } catch(e) { console.error(e); }
+  } catch(e) { 
+    if (e.message.includes('Токен') || e.message.includes('авторизация')) { logout(); }
+  }
 }
 
 async function searchByName(){
@@ -257,7 +262,10 @@ async function searchByName(){
     const r = await api('/search-by-name/'+encodeURIComponent(name));
     if(r.results.length === 0) { box.innerHTML = '<div class="card">Не найдено 😔</div>'; return; }
     box.innerHTML = r.results.map(item => `<div class="card" style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;"><div style="font-weight:800;font-size:18px">@${item.username}</div><div style="background:rgba(74,222,128,0.15);border: 1px solid rgba(74,222,128,0.2);color:var(--ok);padding:6px 12px;border-radius:12px;font-weight:700">Score: ${item.score}</div></div>`).join('');
-  }catch(e){ box.innerHTML = `<div class="card" style="color:var(--bad)">⚠ ${e.message}</div>`; }
+  }catch(e){ 
+    if (e.message.includes('Токен') || e.message.includes('авторизация')) { logout(); }
+    box.innerHTML = `<div class="card" style="color:var(--bad)">⚠ ${e.message}</div>`; 
+  }
 }
 
 function buyPremium(){ toast('Переход в бота...'); window.location.href = 'https://t.me/skupgoldi25gfor1starbot?start=buy'; }
