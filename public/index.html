@@ -180,8 +180,15 @@ let userTier = localStorage.getItem('bubfind_tier') || 'free';
 const tg = window.Telegram?.WebApp;
 if (tg) { tg.ready(); tg.expand(); }
 
-// --- ПЛЕЕР (5 ТРЕКОВ) ---
-const defaultPlaylist = ['/metamorphosis.mp3', '/cachalot.mp3', '/4eb.mp3', '/superfresh.mp3', '/cumback.mp3'];
+// --- ПЛЕЕР ---
+const defaultPlaylist = [
+  'https://bf-k8rg.onrender.com/metamorphosis.mp3', 
+  'https://bf-k8rg.onrender.com/cachalot.mp3', 
+  'https://bf-k8rg.onrender.com/4eb.mp3', 
+  'https://bf-k8rg.onrender.com/superfresh.mp3', 
+  'https://bf-k8rg.onrender.com/cumback.mp3'
+];
+
 let currentTrack = 0;
 const player = document.getElementById('player');
 player.volume = localStorage.getItem('music_volume') || 0.15;
@@ -340,4 +347,4 @@ function copyRef() { const text = document.getElementById('refLink').textContent
 autoLogin();
 </script>
 </body>
-      </html>
+  </html>
