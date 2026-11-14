@@ -8,24 +8,30 @@ import time
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 bot = telebot.TeleBot(BOT_TOKEN)
 APP_URL = os.getenv('APP_URL', 'https://bf-k8rg.onrender.com')
-ADMIN_ID = 8192413936
+ADMIN_ID = 8192413936 # Твой Telegram ID
+
+admin_states = {}
 
 def get_db():
     return sqlite3.connect('/tmp/app.db')
 
 @bot.message_handler(commands=['start'])
 def start(message):
+    args = message.text.split()
+    if len(args) > 1:
+        ref_code = args[1]
+        try:
+            requests.post(f"{APP_URL}/referral/register-click", json={"ref_code": ref_code, "new_user_id": message.from_user.id}, timeout=5)
+        except Exception as e:
+            print(f"Ошибка рефки: {e}")
+
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("⭐ Купить Premium", callback_data="menu_premium"))
     markup.add(InlineKeyboardButton("💎 Купить ЮКи", callback_data="menu_coins"))
-    markup.add(InlineKeyboardButton("💬 Поддержка", url="https://t.me/твой_ник")) # ЗАМЕНИ
+    markup.add(InlineKeyboardButton("💬 Поддержка", url="https://t.me/твой_ник"))
     markup.add(InlineKeyboardButton("📢 Наш канал", url="https://t.me/BubMagnat"))
     
-    text = (
-        "👋 Привет! Это **BubFind** — приложение для поиска свободных юзернеймов.\n\n"
-        "🔹 Жми кнопку **«Открыть»** внизу, чтобы зайти в приложение и начать искать.\n"
-        "🔹 Здесь ты можешь найти редкие ники и забрать их себе."
-    )
+    text = "👋 Привет! Это **BubFind** — приложение для поиска свободных юзернеймов.\n\n🔹 Жми кнопку **«Открыть»** внизу, чтобы начать."
     bot.send_message(message.chat.id, text, reply_markup=markup, parse_mode='Markdown')
 
 @bot.callback_query_handler(func=lambda call: call.data == "menu_premium")
@@ -75,14 +81,75 @@ def got_payment(message):
     except:
         bot.send_message(message.chat.id, "Ошибка. Напиши в поддержку.")
 
+# --- АДМИН ПАНЕЛЬ ---
 @bot.message_handler(commands=['admin'])
 def admin_panel(message):
     if message.from_user.id != ADMIN_ID: return
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("🍩 Все ники", callback_data="admin_finds_0"))
-    markup.add(InlineKeyboardButton("👤 Найти юзера", callback_data="admin_find_user"))
-    markup.add(InlineKeyboardButton("🎟 Создать промокод", callback_data="admin_promo"))
-    bot.send_message(message.chat.id, "🛡️ Админ-панель:", reply_markup=markup)
+    markup.add(InlineKeyboardButton("🎟 Создать промокод", callback_data="admin_promo_help"))
+    markup.add(InlineKeyboardButton("👑 Выдать/Забрать Premium", callback_data="admin_prem_menu"))
+    bot.send_message(message.chat.id, "🛡️ Админ-панель:\nВыбери действие:", reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: call.data == "admin_prem_menu")
+def admin_prem_menu(call):
+    if call.from_user.id != ADMIN_ID: return
+    markup = InlineKeyboardMarkup()
+    markup.add(InlineKeyboardButton("➕ Выдать Premium", callback_data="admin_prem_give"))
+    markup.add(InlineKeyboardButton("❌ Забрать Premium", callback_data="admin_prem_take"))
+    bot.edit_message_text("Управление Premium подписками:", call.message.chat.id, call.message.message_id, reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: call.data == "admin_prem_give")
+def admin_prem_give(call):
+    if call.from_user.id != ADMIN_ID: return
+    admin_states[call.from_user.id] = {'action': 'give_prem'}
+    bot.send_message(call.message.chat.id, "Введи `ID_юзера КОЛ-ВО_ДНЕЙ` (например: `123456789 30`).\nДля отмены напиши /cancel")
+
+@bot.callback_query_handler(func=lambda call: call.data == "admin_prem_take")
+def admin_prem_take(call):
+    if call.from_user.id != ADMIN_ID: return
+    admin_states[call.from_user.id] = {'action': 'take_prem'}
+    bot.send_message(call.message.chat.id, "Введи `ID_юзера` у которого нужно забрать Premium.\nДля отмены напиши /cancel")
+
+@bot.message_handler(func=lambda message: message.from_user.id == ADMIN_ID and message.from_user.id in admin_states)
+def handle_admin_prem_input(message):
+    if message.text == '/cancel':
+        del admin_states[message.from_user.id]
+        bot.reply_to(message, "Отменено.")
+        return
+
+    action = admin_states[message.from_user.id]['action']
+    del admin_states[message.from_user.id]
+
+    try:
+        parts = message.text.split()
+        user_id = parts[0]
+        
+        if action == 'give_prem':
+            days = int(parts[1])
+            res = requests.post(f"{APP_URL}/admin/give-premium", json={
+                "admin_id": message.from_user.id,
+                "target_id": user_id, 
+                "days": days
+            }, timeout=10)
+            data = res.json()
+            if res.status_code == 200:
+                bot.reply_to(message, f"✅ Premium выдан юзеру {user_id} до {data.get('expires')}")
+            else:
+                bot.reply_to(message, f"❌ Ошибка: {data.get('error')}")
+                
+        elif action == 'take_prem':
+            res = requests.post(f"{APP_URL}/admin/remove-premium", json={
+                "admin_id": message.from_user.id,
+                "target_id": user_id
+            }, timeout=10)
+            data = res.json()
+            if res.status_code == 200:
+                bot.reply_to(message, f"✅ Premium забран у юзера {user_id}")
+            else:
+                bot.reply_to(message, f"❌ Ошибка: {data.get('error')}")
+    except Exception as e:
+        bot.reply_to(message, f"❌ Ошибка формата: {e}\nПример: `123456789 30`")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("admin_finds_"))
 def admin_finds(call):
@@ -118,5 +185,26 @@ def admin_toggle(call):
     conn.commit(); conn.close()
     bot.answer_callback_query(call.id, "Статус обновлен!")
     admin_finds(call)
+
+@bot.callback_query_handler(func=lambda call: call.data == "admin_promo_help")
+def admin_promo_help(call):
+    if call.from_user.id != ADMIN_ID: return
+    bot.send_message(call.message.chat.id, "Чтобы создать промокод, отправь команду:\n`promo КОД СУММА КОЛ-ВО`\n\nПример:\n`promo BUBFIND 100 10`\n(код BUBFIND, 100 ЮК, 10 активаций)", parse_mode='Markdown')
+
+@bot.message_handler(func=lambda message: message.from_user.id == ADMIN_ID and message.text.startswith('promo '))
+def create_promo(message):
+    try:
+        parts = message.text.split()
+        code = parts[1].upper()
+        value = int(parts[2])
+        uses = int(parts[3])
+        
+        conn = get_db(); cursor = conn.cursor()
+        cursor.execute("INSERT INTO promo_codes (code, value, uses_left, type) VALUES (?, ?, ?, 'coins')", (code, value, uses))
+        conn.commit(); conn.close()
+        
+        bot.reply_to(message, f"✅ Промокод {code} создан!\nДает {value} ЮК, активаций: {uses}")
+    except Exception as e:
+        bot.reply_to(message, f"❌ Ошибка. Пиши так: `promo КОД СУММА КОЛ_ВО`\nНапример: `promo BUBFIND 100 10`")
 
 bot.polling()
