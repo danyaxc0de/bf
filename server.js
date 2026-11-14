@@ -24,7 +24,6 @@ init().then((database) => {
   const { fullUsernameCheck, isValidFormat } = require('./telegram');
   const { evaluateUsername } = require('./scoring');
 
-  // --- АВТОРИЗАЦИЯ ---
   app.post('/auth/register', (req, res) => {
     const { login, password } = req.body;
     if (!login || !password) return res.status(400).json({ error: 'Заполни все поля' });
@@ -47,7 +46,6 @@ init().then((database) => {
     res.json({ token, tier: user.tier, coins: user.coins, custom_music_url: user.custom_music_url });
   });
 
-  // --- ВХОД ЧЕРЕЗ TELEGRAM WEBAPP ---
   app.post('/auth/telegram-webapp', (req, res) => {
     const { initData } = req.body;
     if (!initData) return res.status(400).json({ error: 'Нет данных' });
@@ -67,42 +65,28 @@ init().then((database) => {
     } catch (e) { res.status(500).json({ error: 'Ошибка авторизации' }); }
   });
 
-  // --- СВОЯ МУЗЫКА (ТОЛЬКО PREMIUM) ---
   app.post('/user/set-music', requireAuth, (req, res) => {
     const { url } = req.body;
     const user = global.db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
-    
-    if (user.tier !== 'premium' && (!user.premium_until || user.premium_until < Date.now())) {
-      return res.status(403).json({ error: 'Только для Premium' });
-    }
-
+    if (user.tier !== 'premium' && (!user.premium_until || user.premium_until < Date.now())) return res.status(403).json({ error: 'Только для Premium' });
     global.db.prepare('UPDATE users SET custom_music_url = ? WHERE id = ?').run(url, req.user.id);
     res.json({ ok: true });
   });
 
-  // --- ПОИСК И ГЕНЕРАЦИЯ ---
   app.get('/search-by-name/:name', requireAuth, async (req, res) => {
     const user = global.db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
     if (user.coins < 20) return res.status(403).json({ error: 'Недостаточно ЮК (нужно 20)' });
-
     const baseName = req.params.name.toLowerCase().replace(/[^a-z0-9_]/g, '');
     if (baseName.length < 2) return res.status(400).json({ error: 'Имя короткое' });
-
     global.db.prepare('UPDATE users SET coins = coins - 20 WHERE id = ?').run(user.id);
-
     const variations = [baseName + '1', baseName + '7', baseName + '0', baseName + '9', baseName + '77', baseName + '228', baseName + 'x', baseName + 'pro', baseName + 'top', baseName + 'vip'];
     const results = [];
-    
     for (const username of variations) {
       if (!isValidFormat(username)) continue;
       const check = await fullUsernameCheck(username);
-      if (check.status === 'free') {
-        const { total } = evaluateUsername(username);
-        results.push({ username, score: total });
-      }
+      if (check.status === 'free') { const { total } = evaluateUsername(username); results.push({ username, score: total }); }
       await new Promise(r => setTimeout(r, 200));
     }
-    
     results.sort((a, b) => b.score - a.score);
     res.json({ base: baseName, results, coinsLeft: user.coins - 20 });
   });
@@ -110,72 +94,37 @@ init().then((database) => {
   app.get('/generate-random', requireAuth, async (req, res) => {
     const user = global.db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
     if (user.coins < 10) return res.status(403).json({ error: 'Недостаточно ЮК' });
-
     global.db.prepare('UPDATE users SET coins = coins - 10 WHERE id = ?').run(user.id);
-
     const chars = 'abcdefghiklmnoprstuvwxy';
     let randomUsername = '';
-    for (let j = 0; j < 5; j++) {
-      randomUsername += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    
+    for (let j = 0; j < 5; j++) randomUsername += chars.charAt(Math.floor(Math.random() * chars.length));
     const check = await fullUsernameCheck(randomUsername);
-    let score = 0;
-    let status = 'taken';
-
-    if (check.status === 'free') {
-      const evalResult = evaluateUsername(randomUsername);
-      score = evalResult.total;
-      status = 'free';
-    }
-    
+    let score = 0; let status = 'taken';
+    if (check.status === 'free') { const evalResult = evaluateUsername(randomUsername); score = evalResult.total; status = 'free'; }
     res.json({ result: { username: randomUsername, score, status }, coinsLeft: user.coins - 10 });
   });
 
-  // --- НАХОДКИ И ТОПЫ ---
-  app.get('/pool/top-finds', (req, res) => {
-    res.json(global.db.prepare(`SELECT * FROM found_usernames WHERE is_hidden = 0 ORDER BY score DESC LIMIT 50`).all());
-  });
-
+  app.get('/pool/top-finds', (req, res) => res.json(global.db.prepare(`SELECT * FROM found_usernames WHERE is_hidden = 0 ORDER BY score DESC LIMIT 50`).all()));
   app.get('/referral/me', requireAuth, (req, res) => {
     const row = global.db.prepare('SELECT code FROM referrals WHERE user_id = ?').get(req.user.id);
     if (!row) return res.status(404).json({ error: 'Реф. код не найден' });
     res.json({ code: row.code, link: `${APP_URL}/r/${row.code}`, invited: 0 });
   });
-
   app.post('/promo/redeem', requireAuth, (req, res) => {
     const { code } = req.body;
     const promo = global.db.prepare('SELECT * FROM promo_codes WHERE code = ? AND uses_left > 0').get(code);
     if (!promo) return res.status(404).json({ error: 'Промокод не найден' });
-    
-    if (promo.type === 'coins') {
-      global.db.prepare('UPDATE users SET coins = coins + ? WHERE id = ?').run(promo.value, req.user.id);
-    }
+    if (promo.type === 'coins') global.db.prepare('UPDATE users SET coins = coins + ? WHERE id = ?').run(promo.value, req.user.id);
     global.db.prepare('UPDATE promo_codes SET uses_left = uses_left - 1 WHERE code = ?').run(code);
     res.json({ ok: true });
   });
+  app.get('/top/users', (req, res) => res.json(global.db.prepare('SELECT telegram_id, coins FROM users ORDER BY coins DESC LIMIT 10').all()));
+  app.get('/top/hunters', (req, res) => res.json(global.db.prepare(`SELECT claimed_by, COUNT(*) as count FROM found_usernames WHERE claimed_by IS NOT NULL AND claimed_by != 'ADMIN' GROUP BY claimed_by ORDER BY count DESC LIMIT 10`).all()));
 
-  app.get('/top/users', (req, res) => {
-    res.json(global.db.prepare('SELECT telegram_id, coins FROM users ORDER BY coins DESC LIMIT 10').all());
-  });
-
-  app.get('/top/hunters', (req, res) => {
-    const hunters = global.db.prepare(`
-      SELECT claimed_by, COUNT(*) as count 
-      FROM found_usernames 
-      WHERE claimed_by IS NOT NULL AND claimed_by != 'ADMIN' 
-      GROUP BY claimed_by 
-      ORDER BY count DESC LIMIT 10
-    `).all();
-    res.json(hunters);
-  });
-
-  // --- ОПЛАТА ---
   app.post('/auth/premium-webhook', (req, res) => {
     const { telegram_id, plan, type } = req.body;
     const user = global.db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(telegram_id);
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
-
     if (type === 'coins') {
       const coinsToAdd = plan === 'coins_50' ? 50 : plan === 'coins_150' ? 150 : 500;
       global.db.prepare('UPDATE users SET coins = coins + ? WHERE id = ?').run(coinsToAdd, user.id);
