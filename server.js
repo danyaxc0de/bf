@@ -15,21 +15,19 @@ const searchLimiter = rateLimit({ windowMs: 60 * 1000, max: 20 });
 const PORT = process.env.PORT || 3000;
 const APP_URL = process.env.APP_URL || 'https://bf-k8rg.onrender.com';
 const BOT_USERNAME = 'skupgoldi25gfor1starbot';
+const ADMIN_ID = '8192413936'; // Твой Telegram ID
 
-// Проверка секретов при старте
-if (!process.env.JWT_SECRET || !process.env.ADMIN_SECRET) {
-  console.error("КРИТИЧЕСКАЯ ОШИБКА: Не заданы JWT_SECRET или ADMIN_SECRET в переменных окружения!");
+if (!process.env.JWT_SECRET) {
+  console.error("КРИТИЧЕСКАЯ ОШИБКА: Не задан JWT_SECRET в переменных окружения!");
   process.exit(1);
 }
 
 const JWT_SECRET = process.env.JWT_SECRET;
-const ADMIN_SECRET = process.env.ADMIN_SECRET;
 
 init().then((database) => {
   console.log('База данных готова к работе!');
   global.db = database;
 
-  // Создаем таблицу промокодов при старте
   global.db.exec(`
     CREATE TABLE IF NOT EXISTS promo_codes (
       code TEXT PRIMARY KEY,
@@ -43,12 +41,13 @@ init().then((database) => {
   const { fullUsernameCheck, isValidFormat } = require('./telegram');
   const { evaluateUsername } = require('./scoring');
 
-  // --- АДМИН ЭНДПОИНТЫ ДЛЯ БОТА ---
+  // --- АДМИН ЭНДПОИНТЫ (ТОЛЬКО ПО ID) ---
   app.post('/admin/give-premium', (req, res) => {
-    if (req.body.secret !== ADMIN_SECRET) return res.status(403).json({ error: 'Отказано' });
-    const { telegram_id, days } = req.body;
+    const { admin_id, target_id, days } = req.body;
+    if (String(admin_id) !== ADMIN_ID) return res.status(403).json({ error: 'Доступ запрещен' });
+
     try {
-      const user = global.db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(String(telegram_id));
+      const user = global.db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(String(target_id));
       if (!user) return res.status(404).json({ error: 'Юзер не найден в базе (пусть зайдет в WebApp)' });
       
       const daysMs = days * 24 * 60 * 60 * 1000;
@@ -60,10 +59,11 @@ init().then((database) => {
   });
 
   app.post('/admin/remove-premium', (req, res) => {
-    if (req.body.secret !== ADMIN_SECRET) return res.status(403).json({ error: 'Отказано' });
-    const { telegram_id } = req.body;
+    const { admin_id, target_id } = req.body;
+    if (String(admin_id) !== ADMIN_ID) return res.status(403).json({ error: 'Доступ запрещен' });
+
     try {
-      const user = global.db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(String(telegram_id));
+      const user = global.db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(String(target_id));
       if (!user) return res.status(404).json({ error: 'Юзер не найден' });
       
       global.db.prepare('UPDATE users SET tier = ?, premium_until = ? WHERE id = ?').run('free', null, user.id);
