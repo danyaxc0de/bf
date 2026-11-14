@@ -130,7 +130,7 @@ init().then((database) => {
       global.db.prepare('UPDATE users SET coins = coins + ? WHERE id = ?').run(coinsToAdd, user.id);
     } else {
       const days = plan === 'day' ? 1 : plan === 'week' ? 7 : plan === 'month' ? 30 : 36500;
-      const bonus = plan === 'day' ? 20 : plan === 'week' ? 150 : plan === 'month' ? 700 : 5000;
+      const bonus = plan === 'day' ? 20 : plan === 'week' ? 150 : plan === 'month' ? 500 : 1000;
       const newPremium = (user.premium_until || Date.now()) + (days * 24 * 60 * 60 * 1000);
       global.db.prepare('UPDATE users SET tier = ?, premium_until = ?, coins = coins + ? WHERE id = ?').run('premium', newPremium, bonus, user.id);
     }
