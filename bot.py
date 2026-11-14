@@ -7,7 +7,7 @@ import time
 
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 bot = telebot.TeleBot(BOT_TOKEN)
-APP_URL = os.getenv('APP_URL', 'https://bubfind.js.org')
+APP_URL = os.getenv('APP_URL', 'https://bf-k8rg.onrender.com')
 ADMIN_ID = 8192413936
 
 def get_db():
@@ -20,7 +20,12 @@ def start(message):
     markup.add(InlineKeyboardButton("💎 Купить ЮКи", callback_data="menu_coins"))
     markup.add(InlineKeyboardButton("💬 Поддержка", url="https://t.me/твой_ник")) # ЗАМЕНИ
     markup.add(InlineKeyboardButton("📢 Наш канал", url="https://t.me/BubMagnat"))
-    text = "👋 Привет! Это **BubFind** — приложение для поиска свободных юзернеймов.\n\n🔹 Жми кнопку **«Открыть»** внизу, чтобы начать."
+    
+    text = (
+        "👋 Привет! Это **BubFind** — приложение для поиска свободных юзернеймов.\n\n"
+        "🔹 Жми кнопку **«Открыть»** внизу, чтобы зайти в приложение и начать искать.\n"
+        "🔹 Здесь ты можешь найти редкие ники и забрать их себе."
+    )
     bot.send_message(message.chat.id, text, reply_markup=markup, parse_mode='Markdown')
 
 @bot.callback_query_handler(func=lambda call: call.data == "menu_premium")
