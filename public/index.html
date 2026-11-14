@@ -7,70 +7,67 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap">
 <style>
-  :root{ --bg:#000000; --card: rgba(255, 255, 255, 0.06); --border: rgba(255, 255, 255, 0.1); --text:#ffffff; --sub:#8e8e93; --accent:#0a84ff; --accent2:#005bb5; --ok:#32d74b; --bad:#ff453a; --star:#ffd60a; }
+  :root{ --bg:#000000; --card: rgba(255, 255, 255, 0.08); --border: rgba(255, 255, 255, 0.15); --text:#ffffff; --sub:#8e8e93; --accent:#0a84ff; --accent2:#005bb5; --star:#ffd60a; --bad:#ff453a; }
   *{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',sans-serif;-webkit-tap-highlight-color:transparent;}
   html,body{height:100%;background:var(--bg);color:var(--text);overflow:hidden}
-  body{ background: radial-gradient(circle at 50% 0%, rgba(10, 132, 255, 0.1), transparent 60%), var(--bg); }
-  
+  body{ background: radial-gradient(circle at 10% 10%, rgba(10, 132, 255, 0.15), transparent 40%), radial-gradient(circle at 90% 90%, rgba(0, 95, 143, 0.15), transparent 40%), #000000; }
+  .glass { background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 100%); backdrop-filter: blur(40px) saturate(150%); border: 1px solid var(--border); box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.4), inset 0 -1px 1px rgba(0, 0, 0, 0.2), 0 8px 32px rgba(0, 0, 0, 0.3); }
   #app{position:relative;z-index:1;max-width:460px;margin:0 auto;height:100vh;display:flex;flex-direction:column}
   .screen{display:none;flex-direction:column;flex:1;min-height:0;animation:slideIn .3s ease-out}
   .screen.active{display:flex}
   @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-  
   .topbar{padding:env(safe-area-inset-top,0px) 20px 0;display:flex;align-items:center;justify-content:space-between;padding-top:calc(env(safe-area-inset-top,0px) + 20px); z-index: 10;}
   .brand{font-weight:900;font-size:24px;letter-spacing:-0.04em;display:flex;align-items:center;gap:8px; color: var(--text);}
-  
-  .glass { background: var(--card); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 16px; }
-  
-  .badge{ font-size:12px;font-weight:700;color:var(--text); background: var(--card); border: 1px solid var(--border); padding:6px 12px;border-radius:999px; display:flex; align-items: center; gap:6px; }
+  .badge{ font-size:12px;font-weight:700;color:var(--text); background: var(--card); backdrop-filter: blur(10px); border: 1px solid var(--border); padding:6px 12px;border-radius:999px; display:flex; align-items: center; gap:6px; }
   .badge.coins { color: var(--accent); border-color: var(--accent); }
-
-  .tabs { display: flex; background: var(--card); border-radius: 12px; padding: 4px; margin-bottom: 16px; }
+  .tabs { display: flex; background: var(--card); backdrop-filter: blur(10px); border-radius: 12px; padding: 4px; margin-bottom: 16px; }
   .tabs button { flex: 1; background: none; border: none; color: var(--sub); padding: 10px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 13px;}
-  .tabs button.active { background: var(--bg); color: var(--text); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-
+  .tabs button.active { background: rgba(255,255,255,0.1); color: var(--text); }
   .field { display:flex;align-items:center;padding:4px 4px 4px 16px; margin-bottom: 16px; }
   .field input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-size:15px;padding:12px 8px}
   .field input::placeholder { color: var(--sub); }
-  
-  .btn{ background: var(--accent); border: none; color:#fff;font-weight:600;font-size:13px;border-radius:12px;padding:10px 16px;cursor:pointer; transition: 0.2s; }
-  .btn:active { transform: scale(0.96); opacity: 0.8; }
+  .btn{ background: var(--accent); border: 1px solid rgba(255,255,255,0.2); color:#fff;font-weight:600;font-size:13px;border-radius:12px;padding:10px 16px;cursor:pointer; transition: 0.2s; box-shadow: 0 4px 15px rgba(10,132,255,0.3); }
+  .btn:active { transform: scale(0.96); }
   .btn-block{width:100%;padding:14px;border-radius:14px;font-size:15px; margin-bottom: 12px;}
-  
-  .tabbar{ position: fixed; bottom: calc(env(safe-area-inset-bottom, 10px) + 10px); left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; display:flex;justify-content:space-around;align-items:center; padding: 8px 10px; background: var(--card); backdrop-filter: blur(20px); border: 1px solid var(--border); border-radius: 24px; z-index: 100; }
+  .tabbar{ position: fixed; bottom: calc(env(safe-area-inset-bottom, 10px) + 10px); left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; display:flex;justify-content:space-around;align-items:center; padding: 8px 10px; background: rgba(255,255,255,0.1); backdrop-filter: blur(50px) saturate(200%); border: 1px solid var(--border); border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.2); z-index: 100; }
   .tabbar button{ background:none;border:none;color:var(--sub); display:flex;flex-direction:column;align-items:center;justify-content:center; width: 50px; height: 45px; border-radius: 16px; cursor:pointer; transition: 0.2s; }
-  .tabbar button.active{ color: var(--accent); background: rgba(10, 132, 255, 0.1); }
+  .tabbar button.active{ color: var(--accent); background: rgba(10, 132, 255, 0.15); box-shadow: inset 0 1px 1px rgba(255,255,255,0.2); }
   .tabbar button svg { width: 22px; height: 22px; fill: currentColor; }
-  
   .content{flex:1;overflow:auto;padding:16px 20px 100px; z-index: 5;}
   .card{ padding:16px; margin-bottom:10px; animation: slideIn 0.2s ease-out; }
-  .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--bg);color:var(--text);border:1px solid var(--border);padding:12px 20px;border-radius:12px;font-size:13px;font-weight: 500;opacity:0;transition:all .2s;z-index:200;max-width:90%;text-align:center;}
+  .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:rgba(30,30,40,0.9);backdrop-filter:blur(20px);border:1px solid var(--border);padding:12px 20px;border-radius:12px;font-size:13px;font-weight: 500;opacity:0;transition:all .2s;z-index:200;max-width:90%;text-align:center;}
   .toast.show{opacity:1; transform: translateX(-50%) translateY(-5px);}
 </style>
 </head>
 <body>
-
-<audio id="bgMusic" loop preload="none">
-  <source src="https://cdn.discordapp.com/attachments/1075069633572397076/1123456789012345678/Interworld_-_Metamorphosis.mp3" type="audio/mpeg">
-</audio>
-
 <div id="app">
-  <!-- ЭКРАН ЗАГРУЗКИ -->
   <section class="screen active" id="screen-loading">
     <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;">
-      <div style="font-size:24px;font-weight:900;">Загрузка...</div>
+      <div style="width:80px;height:80px;border-radius:24px;background:var(--accent); margin-bottom:20px; box-shadow: 0 10px 40px rgba(10,132,255,0.5);"></div>
+      <div style="font-size:20px;font-weight:900;">Загрузка...</div>
     </div>
   </section>
 
-  <!-- ПОИСК -->
+  <section class="screen" id="screen-login">
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:24px">
+      <div style="width:80px;height:80px;border-radius:24px;background:var(--accent); box-shadow: 0 10px 30px rgba(10, 132, 255, 0.3);"></div>
+      <div style="margin-top:20px;font-size:28px;font-weight:900;">BubFind</div>
+    </div>
+    <div style="padding:0 24px calc(env(safe-area-inset-bottom, 0px) + 60px);display:flex;flex-direction:column;gap:10px">
+      <button class="btn btn-block" id="tgLoginBtn" style="display:none; background: var(--accent2);" onclick="loginTelegram()">Войти через Telegram</button>
+      <div style="text-align:center; color:var(--sub); font-size:12px; margin: 10px 0;">Или войди по логину</div>
+      <input id="loginInput" class="field glass" style="padding:14px;" placeholder="Логин">
+      <input id="passInput" type="password" class="field glass" style="padding:14px; color: white;" placeholder="Пароль">
+      <button class="btn btn-block" onclick="doLogin()">Войти</button>
+      <button class="btn btn-block" style="background:transparent;border:1px solid var(--border);color:var(--text);" onclick="doRegister()">Создать аккаунт</button>
+    </div>
+  </section>
+
   <section class="screen" id="screen-main">
     <div class="topbar">
       <div class="brand">BubFind</div>
       <div style="display:flex; align-items:center; gap:10px;">
-        <div class="badge coins">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H8v-2h3V8h2v3h3v2h-3v4h-2z"/></svg>
-          <span id="coinCount">30</span>
-        </div>
+        <div class="badge coins"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15v-4H8v-2h3V8h2v3h3v2h-3v4h-2z"/></svg><span id="coinCount">30</span></div>
         <div class="badge" id="userTierBadge">FREE</div>
       </div>
     </div>
@@ -79,20 +76,14 @@
         <button id="tabRandom" class="active" onclick="switchMode('random')">Рандом</button>
         <button id="tabName" onclick="switchMode('name')">Именной</button>
       </div>
-
       <div id="modeRandom">
         <button class="btn btn-block" style="background: var(--accent2); padding: 18px; font-size: 16px;" onclick="generateRandom()">Сгенерировать ник</button>
         <div style="font-size:12px; color:var(--sub); text-align:center; margin-bottom:20px; margin-top:8px;">Стоимость: 10 ЮК за 1 ник</div>
       </div>
-
       <div id="modeName" style="display:none;">
-        <div class="field glass">
-          <input id="searchName" placeholder="Введи имя (danya)">
-          <button class="btn" onclick="searchByName()">Найти</button>
-        </div>
+        <div class="field glass"><input id="searchName" placeholder="Введи имя (danya)"><button class="btn" onclick="searchByName()">Найти</button></div>
         <div style="font-size:11px; color:var(--sub); text-align:center; margin-bottom:16px;">Стоимость: 20 ЮК</div>
       </div>
-
       <div id="nameResultBox"></div>
     </div>
     <div class="tabbar">
@@ -103,7 +94,6 @@
     </div>
   </section>
 
-  <!-- НАХОДКИ -->
   <section class="screen" id="screen-finds">
     <div class="topbar"><div class="brand">Находки</div></div>
     <div class="content" id="findsList">Загрузка…</div>
@@ -115,7 +105,6 @@
     </div>
   </section>
 
-  <!-- ТОПЫ -->
   <section class="screen" id="screen-tops">
     <div class="topbar"><div class="brand">Топы</div></div>
     <div class="content">
@@ -136,7 +125,6 @@
     </div>
   </section>
 
-  <!-- ПРОФИЛЬ -->
   <section class="screen" id="screen-profile">
     <div class="topbar"><div class="brand">Профиль</div></div>
     <div class="content">
@@ -150,18 +138,26 @@
       </div>
 
       <div class="card glass" style="margin-bottom:16px">
+        <div style="font-weight:800;margin-bottom:10px; font-size: 14px;">🎵 Музыка</div>
+        <button class="btn btn-block" style="background: transparent; border: 1px solid var(--border); color: var(--text); margin-bottom: 10px;" onclick="toggleMusic()" id="musicBtn">🔇 Выключить музыку</button>
+        <label style="font-size: 12px; color: var(--sub);">Громкость</label>
+        <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="0.15" style="width: 100%; margin-top: 5px;" oninput="changeVolume(this.value)">
+        
+        <div id="customMusicSection" style="display:none; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
+          <div style="font-weight:800;margin-bottom:10px; font-size: 13px; color: var(--star);">⭐ Своя музыка (Premium)</div>
+          <div style="font-size: 11px; color: var(--sub); margin-bottom: 5px;">Вставь <b>прямую ссылку</b> на MP3-файл (должна заканчиваться на .mp3)</div>
+          <input id="customMusicUrl" class="field glass" style="padding:10px; font-size:12px;" placeholder="https://example.com/music.mp3">
+          <button class="btn btn-block" onclick="saveCustomMusic()">Сохранить трек</button>
+        </div>
+      </div>
+
+      <div class="card glass" style="margin-bottom:16px">
         <div style="font-weight:800;margin-bottom:10px; font-size: 14px;">🍩 Рефералка</div>
         <div class="field" style="padding:10px;"><span id="refLink" style="font-size:12px;color:var(--text);word-break:break-all;">—</span></div>
         <button class="btn btn-block" style="background:transparent; border:1px solid var(--border);" onclick="copyRef()">Скопировать ссылку</button>
       </div>
 
-      <div class="card glass">
-        <div style="font-weight:800;margin-bottom:10px; font-size: 14px;">🎟 Промокод</div>
-        <div class="field glass" style="padding:8px;">
-          <input id="promoInput" placeholder="Введи код" style="padding:10px; font-size:14px;">
-        </div>
-        <button class="btn btn-block" onclick="redeemPromo()">Активировать</button>
-      </div>
+      <button onclick="logout()" style="background:none; border:none; color:var(--bad); font-size:13px; cursor:pointer; margin-top:20px; width:100%;">Выйти</button>
     </div>
     <div class="tabbar">
       <button onclick="go('main')"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></button>
@@ -173,22 +169,59 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<audio id="player" preload="none"></audio>
 
 <script>
 const API_BASE = '';
 let token = localStorage.getItem('bubfind_token') || null;
 let currentCoins = 30;
+let userTier = localStorage.getItem('bubfind_tier') || 'free';
+
 const tg = window.Telegram?.WebApp;
 if (tg) { tg.ready(); tg.expand(); }
 
-function toast(msg){ const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2500); }
-async function api(path, opts={}){ 
-  const res = await fetch(API_BASE + path, { ...opts, headers: { 'Content-Type':'application/json', ...(token ? {Authorization:'Bearer '+token} : {}), ...(opts.headers||{}) } }); 
-  const data = await res.json().catch(()=>({})); 
-  if(!res.ok) throw new Error(data.error || 'Ошибка'); 
-  return data; 
+// --- ПЛЕЕР (5 ТРЕКОВ) ---
+const defaultPlaylist = ['/metamorphosis.mp3', '/cachalot.mp3', '/4eb.mp3', '/superfresh.mp3', '/cumback.mp3'];
+let currentTrack = 0;
+const player = document.getElementById('player');
+player.volume = localStorage.getItem('music_volume') || 0.15;
+
+document.getElementById('volumeSlider').value = player.volume;
+if (localStorage.getItem('music_on') === 'true') document.getElementById('musicBtn').textContent = '🔇 Выключить музыку';
+else document.getElementById('musicBtn').textContent = '🎵 Включить музыку';
+
+document.body.addEventListener('click', () => {
+  if (player.paused && localStorage.getItem('music_on') !== 'false') {
+    player.src = defaultPlaylist[currentTrack];
+    player.play().catch(e => console.log('Музыка заблокирована'));
+    document.getElementById('musicBtn').textContent = '🔇 Выключить музыку';
+  }
+}, { once: true });
+
+player.addEventListener('ended', () => {
+  currentTrack = (currentTrack + 1) % defaultPlaylist.length;
+  player.src = defaultPlaylist[currentTrack];
+  player.play().catch(e => {});
+});
+
+function toggleMusic() {
+  if (player.paused) { player.play(); localStorage.setItem('music_on', 'true'); document.getElementById('musicBtn').textContent = '🔇 Выключить музыку'; }
+  else { player.pause(); localStorage.setItem('music_on', 'false'); document.getElementById('musicBtn').textContent = '🎵 Включить музыку'; }
 }
+function changeVolume(val) { player.volume = val; localStorage.setItem('music_volume', val); }
+
+function saveCustomMusic() {
+  const url = document.getElementById('customMusicUrl').value.trim();
+  if (!url) return;
+  if (!url.includes('.mp3') && !url.includes('audio')) { toast('Ошибка: нужна ссылка на файл .mp3'); return; }
+  api('/user/set-music', { method: 'POST', body: JSON.stringify({ url }) }).then(() => { toast('Сохранено!'); player.src = url; player.play(); }).catch(e => toast(e.message));
+}
+
+// --- ЛОГИКА ---
+function toast(msg){ const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2500); }
+async function api(path, opts={}){ const res = await fetch(API_BASE + path, { ...opts, headers: { 'Content-Type':'application/json', ...(token ? {Authorization:'Bearer '+token} : {}), ...(opts.headers||{}) } }); const data = await res.json().catch(()=>({})); if(!res.ok) throw new Error(data.error || 'Ошибка'); return data; }
 function updateCoinsUI() { document.getElementById('coinCount').textContent = currentCoins; }
+
 function go(name){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-'+name).classList.add('active');
@@ -196,28 +229,6 @@ function go(name){
   if(name==='profile') loadProfile();
   if(name==='tops') loadTops();
 }
-
-async function autoLogin() {
-  if (tg && tg.initData) {
-    try {
-      const res = await fetch(API_BASE + '/auth/telegram-webapp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ initData: tg.initData })
-      });
-      const data = await res.json();
-      if (data.token) {
-        token = data.token; localStorage.setItem('bubfind_token', token);
-        currentCoins = data.coins; updateCoinsUI();
-        document.getElementById('userTierBadge').textContent = data.tier.toUpperCase();
-        go('main');
-      }
-    } catch(e) { toast('Ошибка входа'); }
-  } else {
-    toast('Открой через Telegram-бота!');
-  }
-}
-autoLogin();
 
 function switchMode(mode) {
   document.getElementById('tabRandom').classList.toggle('active', mode === 'random');
@@ -234,49 +245,72 @@ function getRarity(score) {
   return { name: "БАЗОВЫЙ", color: "#8e8e93" };
 }
 
+async function autoLogin() {
+  if (token) {
+    try {
+      const res = await fetch(API_BASE + '/referral/me', { headers: { Authorization: 'Bearer ' + token } });
+      if (res.ok) { go('main'); return; }
+    } catch(e) {}
+    localStorage.removeItem('bubfind_token'); token = null;
+  }
+  if (tg && tg.initData) {
+    document.getElementById('tgLoginBtn').style.display = 'block';
+    try {
+      const res = await fetch(API_BASE + '/auth/telegram-webapp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ initData: tg.initData }) });
+      const data = await res.json();
+      if (data.token) {
+        token = data.token; localStorage.setItem('bubfind_token', token); currentCoins = data.coins; userTier = data.tier;
+        if(userTier === 'premium') document.getElementById('customMusicSection').style.display = 'block';
+        updateCoinsUI(); go('main'); return;
+      }
+    } catch(e) {}
+  }
+  go('login');
+}
+
+async function doLogin(){
+  try{
+    const data = await api('/auth/login', {method:'POST', body: JSON.stringify({ login: document.getElementById('loginInput').value, password: document.getElementById('passInput').value })});
+    token = data.token; localStorage.setItem('bubfind_token', token); currentCoins = data.coins || 30; userTier = data.tier;
+    if(userTier === 'premium') document.getElementById('customMusicSection').style.display = 'block';
+    updateCoinsUI(); go('main');
+  }catch(e){ toast(e.message); }
+}
+
+async function doRegister(){
+  try{
+    const data = await api('/auth/register', {method:'POST', body: JSON.stringify({ login: document.getElementById('loginInput').value, password: document.getElementById('passInput').value })});
+    token = data.token; localStorage.setItem('bubfind_token', token); currentCoins = 30; userTier = 'free';
+    updateCoinsUI(); go('main');
+  }catch(e){ toast(e.message); }
+}
+
+function logout(){ token = null; localStorage.clear(); go('login'); }
+
 async function searchByName(){
   const name = document.getElementById('searchName').value.trim(); if(!name) return;
   if (currentCoins < 20) { toast('Мало ЮК'); return; }
-
   const box = document.getElementById('nameResultBox'); box.innerHTML = '<div class="card glass">Ищу...</div>';
   try{
     const r = await api('/search-by-name/'+encodeURIComponent(name));
     currentCoins = r.coinsLeft; updateCoinsUI();
-
     if(r.results.length === 0) { box.innerHTML = '<div class="card glass">Не найдено</div>'; return; }
-
     box.innerHTML = r.results.map(item => {
       const rarity = getRarity(item.score);
-      return `<div class="card glass" style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;border-color:${rarity.color}">
-        <div><div style="font-weight:800;font-size:18px">@${item.username}</div><div style="font-size:10px; color:${rarity.color}; font-weight:800; margin-top:2px;">${rarity.name}</div></div>
-        <div style="color:${rarity.color}; font-weight:900">${item.score}</div>
-      </div>`;
+      return `<div class="card glass" style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;border-color:${rarity.color}"><div><div style="font-weight:800;font-size:18px">@${item.username}</div><div style="font-size:10px; color:${rarity.color}; font-weight:800; margin-top:2px;">${rarity.name}</div></div><div style="color:${rarity.color}; font-weight:900">${item.score}</div></div>`;
     }).join('');
   }catch(e){ box.innerHTML = `<div class="card glass" style="color:var(--bad)">⚠ ${e.message}</div>`; }
 }
 
 async function generateRandom(){
   if (currentCoins < 10) { toast('Мало ЮК'); return; }
-  
   const box = document.getElementById('nameResultBox'); box.innerHTML = '<div class="card glass">Ищу...</div>';
   try {
     const r = await api('/generate-random');
     currentCoins = r.coinsLeft; updateCoinsUI();
-    
-    const item = r.result;
-    const rarity = getRarity(item.score);
-    
-    if (item.status !== 'free') {
-      box.innerHTML = `<div class="card glass" style="text-align:center;border-color:var(--bad)"><div style="font-size:18px;color:var(--sub)">@${item.username}</div><div style="font-weight:800;color:var(--bad);margin-top:8px;">Занят</div></div>`;
-      return;
-    }
-
-    box.innerHTML = `
-      <div class="card glass" style="text-align:center; padding: 30px 20px; border-color:${rarity.color}">
-        <div style="font-size:10px; color:${rarity.color}; font-weight:800; margin-bottom:5px;">${rarity.name}</div>
-        <div style="font-weight:900;font-size:32px; margin-bottom:10px;">@${item.username}</div>
-        <div style="font-weight:900;color:${rarity.color}; font-size:24px;">Score: ${item.score}</div>
-      </div>`;
+    const item = r.result; const rarity = getRarity(item.score);
+    if (item.status !== 'free') { box.innerHTML = `<div class="card glass" style="text-align:center;border-color:var(--bad)"><div style="font-size:18px;color:var(--sub)">@${item.username}</div><div style="font-weight:800;color:var(--bad);margin-top:8px;">Занят</div></div>`; return; }
+    box.innerHTML = `<div class="card glass" style="text-align:center; padding: 30px 20px; border-color:${rarity.color}"><div style="font-size:10px; color:${rarity.color}; font-weight:800; margin-bottom:5px;">${rarity.name}</div><div style="font-weight:900;font-size:32px; margin-bottom:10px;">@${item.username}</div><div style="font-weight:900;color:${rarity.color}; font-size:24px;">Score: ${item.score}</div></div>`;
   } catch(e) { box.innerHTML = `<div class="card glass" style="color:var(--bad)">⚠ ${e.message}</div>`; }
 }
 
@@ -285,63 +319,25 @@ async function loadFinds(){
   try{
     const rows = await api('/pool/top-finds');
     if(!rows.length){ list.innerHTML = '<div class="card glass">Пусто</div>'; return; }
-    list.innerHTML = rows.map(r => {
-      const rarity = getRarity(r.score);
-      return `<div class="card glass" style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;border-color:${rarity.color}">
-        <div><div style="font-weight:800; font-size: 16px;">@${r.username}</div><div style="font-size:10px; color:${rarity.color}; font-weight:800; margin-top:2px;">${rarity.name}</div></div>
-        <div style="font-weight:900;color:${rarity.color};">${r.score}</div>
-      </div>`;
-    }).join('');
+    list.innerHTML = rows.map(r => { const rarity = getRarity(r.score); return `<div class="card glass" style="margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;border-color:${rarity.color}"><div><div style="font-weight:800; font-size: 16px;">@${r.username}</div><div style="font-size:10px; color:${rarity.color}; font-weight:800; margin-top:2px;">${rarity.name}</div></div><div style="font-weight:900;color:${rarity.color};">${r.score}</div></div>`; }).join('');
   }catch(e){ list.innerHTML = `<div class="card glass">${e.message}</div>`; }
 }
 
 async function loadProfile(){
   document.getElementById('profileLogin').textContent = localStorage.getItem('bubfind_login') || 'User';
-  document.getElementById('profileTier').textContent = localStorage.getItem('bubfind_tier') === 'premium' ? 'Тариф: Premium' : 'Тариф: Free';
-  
-  try {
-    const ref = await api('/referral/me');
-    document.getElementById('refLink').textContent = ref.link;
-  } catch(e) {}
+  document.getElementById('profileTier').textContent = userTier === 'premium' ? 'Тариф: Premium' : 'Тариф: Free';
+  if (userTier === 'premium') document.getElementById('customMusicSection').style.display = 'block';
+  try { const ref = await api('/referral/me'); document.getElementById('refLink').textContent = ref.link; } catch(e) {}
 }
 
 async function loadTops() {
-  try {
-    const users = await api('/top/users');
-    document.getElementById('topUsersList').innerHTML = users.map((u, i) => `
-      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
-        <div style="font-weight:600">${i+1}. @${u.telegram_id}</div>
-        <div style="color:var(--accent);font-weight:700">${u.coins} ЮК</div>
-      </div>
-    `).join('');
-  } catch(e) { document.getElementById('topUsersList').textContent = 'Ошибка'; }
-
-  try {
-    const hunters = await api('/top/hunters');
-    document.getElementById('topHuntersList').innerHTML = hunters.map((u, i) => `
-      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
-        <div style="font-weight:600">${i+1}. @${u.claimed_by}</div>
-        <div style="color:var(--accent);font-weight:700">${u.count} шт.</div>
-      </div>
-    `).join('');
-  } catch(e) { document.getElementById('topHuntersList').textContent = 'Ошибка'; }
+  try { const users = await api('/top/users'); document.getElementById('topUsersList').innerHTML = users.map((u, i) => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><div style="font-weight:600">${i+1}. @${u.telegram_id}</div><div style="color:var(--accent);font-weight:700">${u.coins} ЮК</div></div>`).join(''); } catch(e) {}
+  try { const hunters = await api('/top/hunters'); document.getElementById('topHuntersList').innerHTML = hunters.map((u, i) => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)"><div style="font-weight:600">${i+1}. @${u.claimed_by}</div><div style="color:var(--accent);font-weight:700">${u.count} шт.</div></div>`).join(''); } catch(e) {}
 }
 
-async function redeemPromo() {
-  const code = document.getElementById('promoInput').value.trim();
-  if(!code) return;
-  try {
-    await api('/promo/redeem', { method: 'POST', body: JSON.stringify({ code }) });
-    toast('Активирован!');
-    document.getElementById('promoInput').value = '';
-  } catch(e) { toast(e.message); }
-}
+function copyRef() { const text = document.getElementById('refLink').textContent; navigator.clipboard?.writeText(text); toast('Скопировано'); }
 
-function copyRef() {
-  const text = document.getElementById('refLink').textContent;
-  navigator.clipboard?.writeText(text);
-  toast('Скопировано');
-}
+autoLogin();
 </script>
 </body>
-  </html>
+      </html>
